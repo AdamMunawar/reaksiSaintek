@@ -67,12 +67,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = article.title;
-  const description = article.excerpt || 'Baca artikel dan liputan mendalam selengkapnya di LPM Reaksi.';
-  const rawCover = article.thumbnail || '/images/reaksi logos.png';
-  const imageUrl = rawCover.startsWith('http')
-    ? rawCover
-    : `${baseUrl}${rawCover.startsWith('/') ? '' : '/'}${rawCover}`;
-  const articleUrl = `${baseUrl}/artikel/${article.slug}`;
+  const description = (article.excerpt || 'Baca artikel dan liputan mendalam selengkapnya di LPM Reaksi.')
+    .replace(/<[^>]+>/g, '')
+    .trim()
+    .slice(0, 160);
+
+  let imageUrl = `${baseUrl}/images/reaksi logos.png`;
+  const rawCover = article.thumbnail || '';
+  if (rawCover.startsWith('http://') || rawCover.startsWith('https://')) {
+    imageUrl = rawCover;
+  } else if (rawCover.startsWith('data:image/')) {
+    // Gunakan endpoint binary stream agar WhatsApp dapat mengunduh gambar murni (bukan teks base64)
+    imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
+  } else if (rawCover) {
+    imageUrl = `${baseUrl}${rawCover.startsWith('/') ? '' : '/'}${rawCover}`;
+  }
+
+  const articleUrl = `${baseUrl}/artikel/${article.slug || slug}`;
 
   return {
     title: `${title} | LPM Reaksi`,
