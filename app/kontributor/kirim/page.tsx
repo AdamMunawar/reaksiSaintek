@@ -125,7 +125,7 @@ function ContributorFormContent() {
       coverCaption: coverCaption.trim(),
       authorId: user?.id || 'user-kontributor',
       authorName: authorName.trim(),
-      authorRole: 'kontributor',
+      authorRole: 'kontributor' as any,
       authorInstitution: authorInstitution.trim(),
       authorPhone: authorPhone.trim(),
       authorBio: authorBio.trim(),
@@ -141,11 +141,11 @@ function ContributorFormContent() {
     })
       .then(async (res) => {
         const saved = await res.json();
-        db.saveArticle(saved || payload);
+        db.saveArticle((saved || payload) as any);
       })
       .catch((err) => {
         console.warn('Post to server failed, saving local:', err);
-        db.saveArticle(payload);
+        db.saveArticle(payload as any);
       })
       .finally(() => {
         setIsSubmitting(false);

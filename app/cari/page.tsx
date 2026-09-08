@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ArticleCard from '@/components/cards/ArticleCard';
 import { getAllActiveArticles, RUBRIK_META, type Rubrik } from '@/lib/data';
+import { db } from '@/lib/db/repository';
 import { Search, X, SlidersHorizontal, Newspaper } from 'lucide-react';
 import Link from 'next/link';
 import { PageTitle } from '@/components/ui/PageTitle';
