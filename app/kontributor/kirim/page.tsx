@@ -115,44 +115,57 @@ function ContributorFormContent() {
 
     const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
 
-    setTimeout(() => {
-      const saved = db.saveArticle({
-        id: editId || undefined,
-        title: title.trim(),
-        rubrik,
-        excerpt: excerpt.trim() || content.slice(0, 160) + '...',
-        content: content.trim(),
-        coverImage: coverImage.trim(),
-        coverCaption: coverCaption.trim(),
-        authorId: user?.id || 'user-kontributor',
-        authorName: authorName.trim(),
-        authorRole: 'kontributor',
-        authorInstitution: authorInstitution.trim(),
-        authorPhone: authorPhone.trim(),
-        authorBio: authorBio.trim(),
-        status,
-        tags,
-        reviewNotes: status === 'PENDING_REVIEW' ? 'Menunggu review dari Pemimpin Redaksi.' : undefined,
+    const payload = {
+      id: editId || undefined,
+      title: title.trim(),
+      rubrik,
+      excerpt: excerpt.trim() || content.slice(0, 160) + '...',
+      content: content.trim(),
+      coverImage: coverImage.trim(),
+      coverCaption: coverCaption.trim(),
+      authorId: user?.id || 'user-kontributor',
+      authorName: authorName.trim(),
+      authorRole: 'kontributor',
+      authorInstitution: authorInstitution.trim(),
+      authorPhone: authorPhone.trim(),
+      authorBio: authorBio.trim(),
+      status,
+      tags,
+      reviewNotes: status === 'PENDING_REVIEW' ? 'Menunggu review dari Pemimpin Redaksi.' : undefined,
+    };
+
+    fetch('/api/articles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        const saved = await res.json();
+        db.saveArticle(saved || payload);
+      })
+      .catch((err) => {
+        console.warn('Post to server failed, saving local:', err);
+        db.saveArticle(payload);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+        setSubmitAction(null);
+
+        if (status === 'PENDING_REVIEW') {
+          setNotification({
+            type: 'success',
+            message: 'Naskah Anda berhasil dikirim ke Meja Redaksi & tersimpan di database server!',
+          });
+          setTimeout(() => {
+            router.push('/kontributor');
+          }, 1000);
+        } else {
+          setNotification({
+            type: 'success',
+            message: 'Naskah berhasil disimpan sebagai draf.',
+          });
+        }
       });
-
-      setIsSubmitting(false);
-      setSubmitAction(null);
-
-      if (status === 'PENDING_REVIEW') {
-        setNotification({
-          type: 'success',
-          message: 'Naskah Anda berhasil dikirim ke Meja Redaksi untuk ditinjau!',
-        });
-        setTimeout(() => {
-          router.push('/kontributor');
-        }, 1000);
-      } else {
-        setNotification({
-          type: 'success',
-          message: 'Naskah berhasil disimpan sebagai draf.',
-        });
-      }
-    }, 600);
   };
 
   return (

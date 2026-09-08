@@ -229,6 +229,37 @@ export const db = {
     return false;
   },
 
+  syncArticlesFromRemote(remoteArticles: any[]): void {
+    if (!Array.isArray(remoteArticles) || remoteArticles.length === 0) return;
+    const normalized: Article[] = remoteArticles.map((a) => ({
+      id: a.id,
+      slug: a.slug,
+      title: a.title,
+      rubrik: a.rubrik,
+      excerpt: a.excerpt || '',
+      content: a.content || '',
+      coverImage: a.coverImage || a.cover_image || '',
+      coverCaption: a.coverCaption || a.cover_caption || '',
+      authorId: a.authorId || a.author_id,
+      authorName: a.authorName || a.author_name || 'Redaksi LPM Reaksi',
+      authorRole: a.authorRole || a.author_role || 'pengurus',
+      status: a.status || 'PUBLISHED',
+      tags: Array.isArray(a.tags) ? a.tags : [],
+      publishedAt: a.publishedAt || a.published_at || a.createdAt || a.created_at,
+      readTime: a.readTime || a.read_time || 3,
+      views: a.views || 0,
+      reviewNotes: a.reviewNotes || a.review_notes,
+      createdAt: a.createdAt || a.created_at || new Date().toISOString(),
+      updatedAt: a.updatedAt || a.updated_at || new Date().toISOString(),
+    }));
+
+    memoryStore.articles = normalized;
+    if (typeof window !== 'undefined') {
+      setLocal(STORAGE_KEYS.ARTICLES, normalized);
+      window.dispatchEvent(new Event('storage'));
+    }
+  },
+
   incrementViews(id: string): void {
     const all = getLocal<Article[]>(STORAGE_KEYS.ARTICLES, memoryStore.articles);
     const idx = all.findIndex((a) => a.id === id);

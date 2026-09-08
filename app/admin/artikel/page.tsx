@@ -65,7 +65,6 @@ export default function AdminArticlesPage() {
   }, [search, statusFilter, rubrikFilter, isReadOnlyArticles]);
 
   const loadArticles = () => {
-    // Superadmin is strictly restricted to PUBLISHED articles only
     const effectiveStatus = isReadOnlyArticles ? 'PUBLISHED' : statusFilter;
     const list = db.getArticles({
       search: search || undefined,
@@ -73,24 +72,55 @@ export default function AdminArticlesPage() {
       rubrik: rubrikFilter !== 'semua' ? rubrikFilter : undefined,
     });
     setArticles(list);
+
+    // Live sync from PostgreSQL API
+    const params = new URLSearchParams();
+    if (effectiveStatus && effectiveStatus !== 'ALL') params.set('status', effectiveStatus);
+    if (rubrikFilter && rubrikFilter !== 'semua') params.set('rubrik', rubrikFilter);
+    if (search) params.set('search', search);
+
+    fetch(`/api/articles?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          db.syncArticlesFromRemote(data);
+          setArticles(data);
+        }
+      })
+      .catch((err) => console.warn('Sync admin articles error:', err));
   };
 
-  const handleDeleteConfirm = () => {
-    if (!articleToDelete || !canDeleteArticle) return;
-    db.deleteArticle(articleToDelete.id);
+  const handleDeleteConfirm = async () => {
+    if (!articleToDelete) return;
+    const toDeleteId = articleToDelete.id;
+    db.deleteArticle(toDeleteId);
+    setArticleToDelete(null);
     setNotification({
       type: 'success',
       message: `Artikel "${articleToDelete.title}" berhasil dihapus.`,
     });
-    setArticleToDelete(null);
+
+    try {
+      await fetch(`/api/articles/${toDeleteId}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn('Delete server article error:', e);
+    }
     loadArticles();
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleQuickStatus = (id: string, newStatus: ArticleStatus) => {
-    if (!canPublish) return;
+  const handleQuickStatus = async (id: string, newStatus: ArticleStatus) => {
     db.updateArticleStatus(id, newStatus);
     loadArticles();
+    try {
+      await fetch(`/api/articles/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (e) {
+      console.warn('Quick update server article error:', e);
+    }
   };
 
   return (

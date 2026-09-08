@@ -61,6 +61,18 @@ export default function RubrikPage() {
     const filtered = all.filter((a) => a.rubrik === rubrikSlug);
     setArticles(filtered);
     setLoading(false);
+
+    // Live sync dari Supabase API
+    fetch(`/api/articles?status=PUBLISHED&rubrik=${encodeURIComponent(rubrikSlug)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          db.syncArticlesFromRemote(data);
+          const liveFiltered = getAllActiveArticles().filter((a) => a.rubrik === rubrikSlug);
+          setArticles(liveFiltered);
+        }
+      })
+      .catch((err) => console.warn('Fetch rubrik articles error:', err));
   }, [rubrikSlug]);
 
   if (loading) {

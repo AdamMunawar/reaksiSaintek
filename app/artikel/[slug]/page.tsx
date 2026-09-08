@@ -96,9 +96,45 @@ export default function ArticlePage() {
       if (db && typeof db.incrementViews === 'function') {
         db.incrementViews(found.id);
       }
+      setLoading(false);
     }
 
-    setLoading(false);
+    // Live fetch dari database server (terutama untuk device baru yang belum punya local cache)
+    fetch(`/api/articles/${encodeURIComponent(slug)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((remoteArt) => {
+        if (remoteArt && !remoteArt.error) {
+          const mapped: Article = {
+            id: remoteArt.id,
+            slug: remoteArt.slug,
+            title: remoteArt.title,
+            excerpt: remoteArt.excerpt,
+            content: remoteArt.content,
+            author: remoteArt.authorName || remoteArt.author_name || 'Redaksi LPM Reaksi',
+            authorAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(remoteArt.authorName || remoteArt.author_name || 'Redaksi')}&background=1d4ed8&color=fff`,
+            rubrik: remoteArt.rubrik as any,
+            publishedAt: remoteArt.publishedAt || remoteArt.published_at || remoteArt.createdAt || new Date().toISOString(),
+            readTime: remoteArt.readTime || remoteArt.read_time || 3,
+            thumbnail: remoteArt.coverImage || remoteArt.cover_image,
+            coverCaption: remoteArt.coverCaption || remoteArt.cover_caption,
+            tags: remoteArt.tags || [],
+            views: remoteArt.views || 0,
+          };
+          setArticle(mapped);
+          setRelated(getRelatedArticles(mapped, 3));
+          db.saveArticle(mapped as any);
+
+          const dynRubrik = db.getRubrikBySlug(mapped.rubrik);
+          if (dynRubrik) {
+            setRubrikMeta({
+              label: dynRubrik.name,
+              color: dynRubrik.color,
+            });
+          }
+        }
+      })
+      .catch((e) => console.warn('Fetch remote article failed:', e))
+      .finally(() => setLoading(false));
   }, [slug]);
 
   if (loading) {

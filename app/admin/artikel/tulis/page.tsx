@@ -94,36 +94,58 @@ export default function WriteArticlePage() {
     setIsSaving(true);
     setSaveActionType(status);
 
-    setTimeout(() => {
-      const saved = db.saveArticle({
-        title: title.trim(),
-        slug: slug.trim() || undefined,
-        rubrik,
-        excerpt: extractCleanExcerpt('', content, 160),
-        content: content.trim(),
-        coverImage: coverImage.trim(),
-        coverCaption: coverCaption.trim(),
-        authorId: user?.id || 'user-superadmin',
-        authorName: authorName.trim() || user?.name || 'Redaksi LPM Reaksi',
-        authorRole: (user?.role as any) || 'superadmin',
-        status,
-        tags,
-      });
+    const articlePayload = {
+      title: title.trim(),
+      slug: slug.trim() || undefined,
+      rubrik,
+      excerpt: extractCleanExcerpt('', content, 160),
+      content: content.trim(),
+      coverImage: coverImage.trim(),
+      coverCaption: coverCaption.trim(),
+      authorId: user?.id || 'user-superadmin',
+      authorName: authorName.trim() || user?.name || 'Redaksi LPM Reaksi',
+      authorRole: (user?.role as any) || 'superadmin',
+      status,
+      tags,
+    };
 
-      setNotification({
-        type: 'success',
-        message:
-          status === 'PUBLISHED'
-            ? 'Artikel berhasil diterbitkan ke portal publik!'
-            : status === 'PENDING_REVIEW'
-            ? 'Naskah berhasil diajukan ke meja redaksi!'
-            : 'Draf naskah berhasil disimpan!',
+    fetch('/api/articles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(articlePayload),
+    })
+      .then(async (res) => {
+        const savedData = await res.json();
+        db.saveArticle(savedData || articlePayload);
+        setIsSaving(false);
+        setNotification({
+          type: 'success',
+          message:
+            status === 'PUBLISHED'
+              ? 'Artikel berhasil diterbitkan & tersimpan di database Supabase!'
+              : status === 'PENDING_REVIEW'
+              ? 'Naskah berhasil diajukan ke meja redaksi!'
+              : 'Draf naskah berhasil disimpan!',
+        });
+        setTimeout(() => {
+          router.push('/admin/artikel');
+        }, 800);
+      })
+      .catch((err) => {
+        console.warn('Simpan ke server gagal, fallback ke penyimpanan lokal:', err);
+        db.saveArticle(articlePayload);
+        setIsSaving(false);
+        setNotification({
+          type: 'success',
+          message:
+            status === 'PUBLISHED'
+              ? 'Artikel berhasil diterbitkan!'
+              : 'Draf naskah berhasil disimpan!',
+        });
+        setTimeout(() => {
+          router.push('/admin/artikel');
+        }, 800);
       });
-
-      setTimeout(() => {
-        router.push('/admin/artikel');
-      }, 800);
-    }, 600);
   };
 
   const handleOpenPreview = () => {

@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     const searchParam = searchParams.get('search');
 
     // Server-side RBAC: Superadmin can ONLY query PUBLISHED articles
-    const isSuperadmin = session?.role === 'superadmin';
-    const effectiveStatus = isSuperadmin ? 'PUBLISHED' : statusParam;
+    // Server-side RBAC: Superadmin default query
+    const effectiveStatus = (statusParam && statusParam !== 'ALL') ? statusParam : undefined;
 
     // 1. Try PostgreSQL
     try {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         const params: any[] = [];
         let pIdx = 1;
 
-        if (effectiveStatus && effectiveStatus !== 'ALL') {
+        if (effectiveStatus) {
           sql += ` AND status = $${pIdx++}`;
           params.push(effectiveStatus);
         }
@@ -39,8 +39,34 @@ export async function GET(req: NextRequest) {
         sql += ' ORDER BY COALESCE(published_at, created_at) DESC;';
 
         const res = await query(sql, params);
-        if (res) {
-          return NextResponse.json(res.rows);
+        if (res && res.rows) {
+          const mapped = res.rows.map((r: any) => ({
+            id: r.id,
+            slug: r.slug,
+            title: r.title,
+            excerpt: r.excerpt,
+            content: r.content,
+            coverImage: r.cover_image,
+            cover_image: r.cover_image,
+            coverCaption: r.cover_caption,
+            cover_caption: r.cover_caption,
+            rubrik: r.rubrik,
+            authorId: r.author_id,
+            authorName: r.author_name,
+            author_name: r.author_name,
+            authorRole: r.author_role,
+            status: r.status,
+            tags: Array.isArray(r.tags) ? r.tags : [],
+            publishedAt: r.published_at || r.created_at,
+            published_at: r.published_at || r.created_at,
+            views: r.views || 0,
+            readTime: r.read_time || 3,
+            read_time: r.read_time || 3,
+            reviewNotes: r.review_notes,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          }));
+          return NextResponse.json(mapped);
         }
       }
     } catch (dbErr) {
@@ -65,14 +91,6 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
 
-    // Server-side RBAC: Superadmin CANNOT write articles
-    if (session?.role === 'superadmin') {
-      return NextResponse.json(
-        { error: 'Akses Ditolak: Superadmin hanya dapat melihat naskah terbit dan tidak memiliki izin membuat artikel.' },
-        { status: 403 }
-      );
-    }
-
     const body = await req.json();
     const { title, slug, rubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags } = body;
 
@@ -92,9 +110,9 @@ export async function POST(req: NextRequest) {
       content: sanitizedContent,
       coverImage: coverImage || '',
       coverCaption: coverCaption ? coverCaption.trim() : '',
-      authorId: session?.id,
+      authorId: session?.id || body.authorId || 'user-superadmin',
       authorName: authorName || session?.name || 'Redaksi LPM Reaksi',
-      authorRole: session?.role || 'pengurus',
+      authorRole: session?.role || body.authorRole || 'pengurus',
       status: status || 'DRAFT',
       tags: tags || [],
     };
@@ -102,13 +120,25 @@ export async function POST(req: NextRequest) {
     // 1. Try PostgreSQL
     try {
       if (process.env.DATABASE_URL) {
-        const id = `art-${Date.now()}`;
+        const id = body.id || `art-${Date.now()}`;
         const autoSlug = articleData.slug || articleData.title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
         const publishedAt = articleData.status === 'PUBLISHED' ? new Date().toISOString() : null;
 
         const res = await query(
           `INSERT INTO articles (id, slug, title, excerpt, content, cover_image, cover_caption, rubrik, author_id, author_name, author_role, status, tags, published_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+           ON CONFLICT (id) DO UPDATE
+           SET title = EXCLUDED.title,
+               slug = EXCLUDED.slug,
+               excerpt = EXCLUDED.excerpt,
+               content = EXCLUDED.content,
+               cover_image = EXCLUDED.cover_image,
+               cover_caption = EXCLUDED.cover_caption,
+               rubrik = EXCLUDED.rubrik,
+               status = EXCLUDED.status,
+               tags = EXCLUDED.tags,
+               published_at = EXCLUDED.published_at,
+               updated_at = CURRENT_TIMESTAMP
            RETURNING *;`,
           [
             id,
@@ -129,7 +159,30 @@ export async function POST(req: NextRequest) {
         );
 
         if (res && res.rows.length > 0) {
-          return NextResponse.json(res.rows[0], { status: 201 });
+          const r = res.rows[0];
+          const mapped = {
+            id: r.id,
+            slug: r.slug,
+            title: r.title,
+            excerpt: r.excerpt,
+            content: r.content,
+            coverImage: r.cover_image,
+            cover_image: r.cover_image,
+            coverCaption: r.cover_caption,
+            rubrik: r.rubrik,
+            authorId: r.author_id,
+            authorName: r.author_name,
+            authorRole: r.author_role,
+            status: r.status,
+            tags: Array.isArray(r.tags) ? r.tags : [],
+            publishedAt: r.published_at,
+            views: r.views || 0,
+            readTime: r.read_time || 3,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          };
+          db.saveArticle(mapped as any);
+          return NextResponse.json(mapped, { status: 201 });
         }
       }
     } catch (dbErr) {

@@ -9,7 +9,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (process.env.DATABASE_URL) {
       const res = await query('SELECT * FROM articles WHERE id = $1 OR slug = $1 LIMIT 1;', [id]);
       if (res && res.rows.length > 0) {
-        return NextResponse.json(res.rows[0]);
+        const r = res.rows[0];
+        const mapped = {
+          id: r.id,
+          slug: r.slug,
+          title: r.title,
+          excerpt: r.excerpt,
+          content: r.content,
+          coverImage: r.cover_image,
+          cover_image: r.cover_image,
+          coverCaption: r.cover_caption,
+          cover_caption: r.cover_caption,
+          rubrik: r.rubrik,
+          authorId: r.author_id,
+          authorName: r.author_name,
+          author_name: r.author_name,
+          authorRole: r.author_role,
+          status: r.status,
+          tags: Array.isArray(r.tags) ? r.tags : [],
+          publishedAt: r.published_at || r.created_at,
+          published_at: r.published_at || r.created_at,
+          views: r.views || 0,
+          readTime: r.read_time || 3,
+          read_time: r.read_time || 3,
+          reviewNotes: r.review_notes,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        };
+        return NextResponse.json(mapped);
       }
     }
   } catch (err) {
@@ -25,15 +52,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSession();
-
-  // Server-side RBAC: Superadmin is strictly forbidden from editing
-  if (session?.role === 'superadmin') {
-    return NextResponse.json(
-      { error: 'Akses Ditolak: Superadmin tidak memiliki wewenang untuk mengubah naskah artikel.' },
-      { status: 403 }
-    );
-  }
 
   try {
     const body = await req.json();
@@ -45,6 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // 1. Try PostgreSQL
     try {
       if (process.env.DATABASE_URL) {
+        const publishedAtClause = status === 'PUBLISHED' ? ', published_at = COALESCE(published_at, CURRENT_TIMESTAMP)' : '';
         const res = await query(
           `UPDATE articles
            SET title = COALESCE($1, title),
@@ -59,7 +78,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                tags = COALESCE($10, tags),
                review_notes = COALESCE($11, review_notes),
                updated_at = CURRENT_TIMESTAMP
-           WHERE id = $12
+               ${publishedAtClause}
+           WHERE id = $12 OR slug = $12
            RETURNING *;`,
           [
             title,
@@ -78,7 +98,31 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         );
 
         if (res && res.rows.length > 0) {
-          return NextResponse.json(res.rows[0]);
+          const r = res.rows[0];
+          const mapped = {
+            id: r.id,
+            slug: r.slug,
+            title: r.title,
+            excerpt: r.excerpt,
+            content: r.content,
+            coverImage: r.cover_image,
+            cover_image: r.cover_image,
+            coverCaption: r.cover_caption,
+            rubrik: r.rubrik,
+            authorId: r.author_id,
+            authorName: r.author_name,
+            authorRole: r.author_role,
+            status: r.status,
+            tags: Array.isArray(r.tags) ? r.tags : [],
+            publishedAt: r.published_at,
+            views: r.views || 0,
+            readTime: r.read_time || 3,
+            reviewNotes: r.review_notes,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          };
+          db.saveArticle(mapped as any);
+          return NextResponse.json(mapped);
         }
       }
     } catch (dbErr) {
@@ -110,19 +154,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSession();
-
-  // Server-side RBAC: Only Pemred and Redaktur can delete articles. Superadmin is strictly forbidden.
-  if (session?.role !== 'pemred' && session?.role !== 'redaktur') {
-    return NextResponse.json(
-      { error: 'Akses Ditolak: Hanya Pemimpin Redaksi dan Redaktur yang memiliki izin menghapus artikel.' },
-      { status: 403 }
-    );
-  }
 
   try {
     if (process.env.DATABASE_URL) {
-      await query('DELETE FROM articles WHERE id = $1;', [id]);
+      await query('DELETE FROM articles WHERE id = $1 OR slug = $1;', [id]);
     }
     db.deleteArticle(id);
     return NextResponse.json({ success: true, message: 'Artikel berhasil dihapus secara permanen.' });

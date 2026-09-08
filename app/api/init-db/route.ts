@@ -17,7 +17,13 @@ async function handleInit() {
     });
   } catch (error: any) {
     console.error('Database initialization error:', error);
-    return NextResponse.json({ error: 'Gagal menginisialisasi database. Silakan periksa konfigurasi server.' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Gagal menginisialisasi database.',
+        details: error?.message || String(error),
+      },
+      { status: 500 }
+    );
   }
 }
 

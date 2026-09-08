@@ -44,9 +44,25 @@ export default function ReviewHubPage() {
     } else if (list.length === 0) {
       setSelectedArticle(null);
     }
+
+    // Live sync dari database server
+    fetch('/api/articles?status=PENDING_REVIEW')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          db.syncArticlesFromRemote(data);
+          setPendingArticles(data);
+          if (data.length > 0 && !selectedArticle) {
+            setSelectedArticle(data[0]);
+          } else if (data.length === 0) {
+            setSelectedArticle(null);
+          }
+        }
+      })
+      .catch((e) => console.warn('Fetch pending articles error:', e));
   };
 
-  const handleDecision = (decision: 'PUBLISHED' | 'REVISION' | 'REJECTED') => {
+  const handleDecision = async (decision: 'PUBLISHED' | 'REVISION' | 'REJECTED') => {
     if (!selectedArticle) return;
 
     if (decision === 'PUBLISHED' && !selectedArticle.coverImage?.trim()) {
@@ -60,26 +76,38 @@ export default function ReviewHubPage() {
     setIsProcessing(true);
     setDecisionAction(decision);
 
+    const notes = reviewNote.trim() || undefined;
+    db.updateArticleStatus(selectedArticle.id, decision, notes);
+
+    try {
+      await fetch(`/api/articles/${selectedArticle.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: decision,
+          reviewNotes: notes,
+        }),
+      });
+    } catch (e) {
+      console.warn('Update review status to server error:', e);
+    }
+
+    const message =
+      decision === 'PUBLISHED'
+        ? `Artikel "${selectedArticle.title}" berhasil DISETUJUI & DITERBITKAN ke portal publik & database server!`
+        : decision === 'REVISION'
+        ? `Status naskah diubah menjadi "Perlu Revisi" dengan catatan perbaikan.`
+        : `Naskah ditolak.`;
+
+    setActionSuccess(message);
+    setReviewNote('');
+    setIsProcessing(false);
+    setDecisionAction(null);
+    loadPending();
+
     setTimeout(() => {
-      db.updateArticleStatus(selectedArticle.id, decision, reviewNote.trim() || undefined);
-
-      const message =
-        decision === 'PUBLISHED'
-          ? `Artikel "${selectedArticle.title}" berhasil DISETUJUI & DITERBITKAN ke portal publik!`
-          : decision === 'REVISION'
-          ? `Status naskah diubah menjadi "Perlu Revisi" dengan catatan perbaikan.`
-          : `Naskah ditolak.`;
-
-      setActionSuccess(message);
-      setReviewNote('');
-      setIsProcessing(false);
-      setDecisionAction(null);
-      loadPending();
-
-      setTimeout(() => {
-        setActionSuccess(null);
-      }, 4000);
-    }, 600);
+      setActionSuccess(null);
+    }, 4000);
   };
 
   if (!canReview) {

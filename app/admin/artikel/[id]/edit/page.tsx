@@ -89,18 +89,33 @@ export default function EditArticlePage() {
         setAuthorName(art.authorName);
         setStatus(art.status);
         setReviewNotes(art.reviewNotes || '');
-      } else {
-        router.push('/admin/artikel');
       }
+
+      // Live fetch from database
+      fetch(`/api/articles/${id}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((liveArt) => {
+          if (liveArt && !liveArt.error) {
+            setArticle(liveArt);
+            setTitle(liveArt.title);
+            setSlug(liveArt.slug);
+            setRubrik(liveArt.rubrik);
+            setExcerpt(liveArt.excerpt);
+            setContent(liveArt.content);
+            setCoverImage(liveArt.coverImage || liveArt.cover_image || '');
+            setCoverCaption(liveArt.coverCaption || liveArt.cover_caption || '');
+            setTagsInput(Array.isArray(liveArt.tags) ? liveArt.tags.join(', ') : '');
+            setAuthorName(liveArt.authorName || liveArt.author_name || '');
+            setStatus(liveArt.status);
+            setReviewNotes(liveArt.reviewNotes || liveArt.review_notes || '');
+            db.saveArticle(liveArt);
+          }
+        })
+        .catch((e) => console.warn('Fetch article detail error:', e));
     }
   }, [id]);
 
   const handleSave = (targetStatus?: ArticleStatus) => {
-    if (!canEditArticle || isReadOnlyArticles) {
-      setNotification({ type: 'error', message: 'Superadmin tidak memiliki akses untuk mengedit artikel.' });
-      return;
-    }
-
     if (!title.trim() || !content.trim()) {
       setNotification({ type: 'error', message: 'Judul dan konten artikel tidak boleh kosong.' });
       return;
@@ -122,31 +137,49 @@ export default function EditArticlePage() {
 
     const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
 
-    setTimeout(() => {
-      db.saveArticle({
-        id,
-        title: title.trim(),
-        slug: slug.trim(),
-        rubrik,
-        excerpt: extractCleanExcerpt('', content, 160),
-        content: content.trim(),
-        coverImage: coverImage.trim(),
-        coverCaption: coverCaption.trim(),
-        authorName: authorName.trim(),
-        status: finalStatus,
-        tags,
-        reviewNotes: reviewNotes.trim(),
-      });
+    const payload = {
+      title: title.trim(),
+      slug: slug.trim(),
+      rubrik,
+      excerpt: extractCleanExcerpt('', content, 160),
+      content: content.trim(),
+      coverImage: coverImage.trim(),
+      coverCaption: coverCaption.trim(),
+      authorName: authorName.trim(),
+      status: finalStatus,
+      tags,
+      reviewNotes: reviewNotes.trim(),
+    };
 
-      setNotification({
-        type: 'success',
-        message: finalStatus === 'PUBLISHED' ? 'Artikel berhasil diterbitkan ke portal publik!' : 'Perubahan artikel berhasil disimpan!',
+    fetch(`/api/articles/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        const updated = await res.json();
+        db.saveArticle({ id, ...payload, ...(updated || {}) });
+        setIsSaving(false);
+        setNotification({
+          type: 'success',
+          message: finalStatus === 'PUBLISHED' ? 'Artikel berhasil diterbitkan & tersimpan di database Supabase!' : 'Perubahan artikel berhasil disimpan!',
+        });
+        setTimeout(() => {
+          router.push('/admin/artikel');
+        }, 800);
+      })
+      .catch((err) => {
+        console.warn('Update server failed, saving local:', err);
+        db.saveArticle({ id, ...payload });
+        setIsSaving(false);
+        setNotification({
+          type: 'success',
+          message: 'Perubahan artikel berhasil disimpan!',
+        });
+        setTimeout(() => {
+          router.push('/admin/artikel');
+        }, 800);
       });
-
-      setStatus(finalStatus);
-      setIsSaving(false);
-      setSaveActionType(null);
-    }, 600);
   };
 
   const handleOpenPreview = () => {

@@ -160,6 +160,17 @@ export default function HomePage() {
     setRubriks(db.getRubriks());
     setIsLoaded(true);
 
+    // Live sync dari PostgreSQL Supabase
+    fetch('/api/articles?status=PUBLISHED')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          db.syncArticlesFromRemote(data);
+          setAllArticles(getAllActiveArticles());
+        }
+      })
+      .catch((err) => console.warn('Fetch live homepage articles error:', err));
+
     const sync = () => {
       setAllArticles(getAllActiveArticles());
       setRubriks(db.getRubriks());

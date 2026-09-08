@@ -33,6 +33,15 @@ function SearchContent() {
 
   useEffect(() => {
     setAllArticles(getAllActiveArticles());
+    fetch('/api/articles?status=PUBLISHED')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          db.syncArticlesFromRemote(data);
+          setAllArticles(getAllActiveArticles());
+        }
+      })
+      .catch((e) => console.warn('Search sync articles error:', e));
   }, []);
 
   useEffect(() => {
