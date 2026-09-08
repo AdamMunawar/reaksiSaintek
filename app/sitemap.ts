@@ -3,7 +3,10 @@ import { db } from '@/lib/db/repository';
 import { RUBRIKS } from '@/lib/data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://reaksisaintek.com';
+  const vercelDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL 
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` 
+    : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || vercelDomain || 'https://reaksisaintek.vercel.app';
   const now = new Date();
 
   // 1. Static Pages

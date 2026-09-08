@@ -42,6 +42,14 @@ export const RUBRIK_META: Record<Rubrik, { label: string; description: string; c
   'selisik':       { label: 'Selisik',         description: 'Investigasi dan liputan mendalam eksklusif', color: '#DC2626', emoji: '' },
 };
 
+export const RUBRIKS = (Object.keys(RUBRIK_META) as Rubrik[]).map((slug) => ({
+  slug,
+  name: RUBRIK_META[slug].label,
+  description: RUBRIK_META[slug].description,
+  color: RUBRIK_META[slug].color,
+  emoji: RUBRIK_META[slug].emoji || '',
+}));
+
 // Mulai dari 0 naskah bersih - Portal siap memuat artikel live dari DB Meja Redaksi
 export const articles: Article[] = [];
 
@@ -61,7 +69,7 @@ export function getAllActiveArticles(): Article[] {
           authorAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(a.authorName)}&background=1d4ed8&color=fff`,
           rubrik: a.rubrik as Rubrik,
           publishedAt: a.publishedAt || a.createdAt,
-          readTime: a.readTime,
+          readTime: a.readTime || 3,
           thumbnail: a.coverImage,
           coverCaption: a.coverCaption,
           tags: a.tags || [],
