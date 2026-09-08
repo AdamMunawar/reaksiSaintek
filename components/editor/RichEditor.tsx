@@ -210,7 +210,7 @@ export default function RichEditor({
       const optimized = await optimizeImageInBrowser(file, {
         maxWidth: 1200,
         quality: 0.8,
-        targetFormat: 'image/webp',
+        targetFormat: 'image/jpeg',
       });
 
       // 2. Upload ke server API

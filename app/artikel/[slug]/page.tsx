@@ -72,15 +72,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .trim()
     .slice(0, 160);
 
-  let imageUrl = `${baseUrl}/images/reaksi logos.png`;
+  let imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
   const rawCover = article.thumbnail || '';
-  if (rawCover.startsWith('http://') || rawCover.startsWith('https://')) {
-    imageUrl = rawCover;
-  } else if (rawCover.startsWith('data:image/')) {
-    // Gunakan endpoint binary stream agar WhatsApp dapat mengunduh gambar murni (bukan teks base64)
-    imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
-  } else if (rawCover) {
-    imageUrl = `${baseUrl}${rawCover.startsWith('/') ? '' : '/'}${rawCover}`;
+  if (!rawCover) {
+    imageUrl = `${baseUrl}/images/reaksi.png`;
   }
 
   const articleUrl = `${baseUrl}/artikel/${article.slug || slug}`;
@@ -102,8 +97,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [
         {
           url: imageUrl,
+          secureUrl: imageUrl,
           width: 1200,
           height: 630,
+          type: 'image/jpeg',
           alt: title,
         },
       ],

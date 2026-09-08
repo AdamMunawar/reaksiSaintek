@@ -63,11 +63,11 @@ export default function ImageUploader({
     setStatusMessage('Mengoptimasi & mengompresi gambar di browser...');
 
     try {
-      // 1. Kompresi di browser (Canvas WebP) -> 0% CPU server!
+      // 1. Kompresi di browser (Canvas JPEG) -> Universal social preview compatible
       const optimized = await optimizeImageInBrowser(file, {
         maxWidth,
         quality,
-        targetFormat: 'image/webp',
+        targetFormat: 'image/jpeg',
       });
 
       setOptimizationStats(optimized);
@@ -96,7 +96,7 @@ export default function ImageUploader({
               filename: data.filename || optimized.file.name,
               url: data.url,
               size: optimized.compressedSize,
-              mimeType: 'image/webp',
+              mimeType: 'image/jpeg',
               uploadedBy: authorName,
             });
           } catch (e) {

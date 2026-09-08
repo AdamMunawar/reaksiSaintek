@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/backend/db/postgres';
 import { db } from '@/backend/db/repository';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -34,40 +36,81 @@ export async function GET(
     }
   }
 
-  // If no article image found, redirect to default site logo
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '') ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
     'https://reaksi-saintek.vercel.app';
 
+  const defaultLogoRedirect = () => {
+    return NextResponse.redirect(new URL('/images/reaksi.png', siteUrl));
+  };
+
   if (!rawImage) {
-    return NextResponse.redirect(new URL('/images/reaksi logos.png', siteUrl));
+    return defaultLogoRedirect();
   }
 
-  // 3. If it is an external URL, redirect directly
-  if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
-    return NextResponse.redirect(rawImage);
-  }
+  try {
+    let inputBuffer: Buffer | null = null;
 
-  // 4. If it is a Base64 Data URL (data:image/...;base64,...)
-  if (rawImage.startsWith('data:image/')) {
-    const matches = rawImage.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      const contentType = matches[1];
-      const base64Data = matches[2];
-      const imageBuffer = Buffer.from(base64Data, 'base64');
+    if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
+      const resp = await fetch(rawImage);
+      if (!resp.ok) return defaultLogoRedirect();
+      inputBuffer = Buffer.from(await resp.arrayBuffer());
+    } else if (rawImage.startsWith('data:image/')) {
+      const commaIdx = rawImage.indexOf(',');
+      if (commaIdx !== -1) {
+        const base64Data = rawImage.slice(commaIdx + 1).replace(/\s+/g, '');
+        inputBuffer = Buffer.from(base64Data, 'base64');
+      }
+    }
 
-      return new Response(imageBuffer, {
+    if (!inputBuffer || inputBuffer.length === 0) {
+      return defaultLogoRedirect();
+    }
+
+    // Try converting using sharp to standard 1200x630 JPEG (WhatsApp requirement)
+    try {
+      // Dynamic import sharp to allow graceful fallback if sharp isn't loaded
+      const sharpModule = await import('sharp');
+      const sharp = sharpModule.default || sharpModule;
+
+      const outputJpeg = await sharp(inputBuffer)
+        .resize(1200, 630, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .jpeg({
+          quality: 82,
+          mozjpeg: true,
+        })
+        .toBuffer();
+
+      return new Response(new Uint8Array(outputJpeg), {
         headers: {
-          'Content-Type': contentType,
-          'Content-Length': imageBuffer.length.toString(),
+          'Content-Type': 'image/jpeg',
+          'Content-Length': outputJpeg.length.toString(),
           'Cache-Control': 'public, max-age=86400, s-maxage=31536000, immutable',
         },
       });
-    }
-  }
+    } catch (sharpErr) {
+      console.warn('Sharp processing failed, serving buffer directly:', sharpErr);
 
-  // Fallback to logo
-  return NextResponse.redirect(new URL('/images/reaksi logos.png', siteUrl));
+      // If buffer is already under 300KB, serve directly
+      if (inputBuffer.length <= 300000) {
+        return new Response(new Uint8Array(inputBuffer), {
+          headers: {
+            'Content-Type': 'image/jpeg',
+            'Content-Length': inputBuffer.length.toString(),
+            'Cache-Control': 'public, max-age=86400, s-maxage=31536000, immutable',
+          },
+        });
+      }
+
+      return defaultLogoRedirect();
+    }
+  } catch (e) {
+    console.error('OG image handler error:', e);
+    return defaultLogoRedirect();
+  }
 }
