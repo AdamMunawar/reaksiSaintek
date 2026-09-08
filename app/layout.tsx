@@ -24,9 +24,16 @@ const lora = Lora({
   display: "swap",
 });
 
+const defaultSiteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '') ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+  'https://reaksisaintek.vercel.app';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(defaultSiteUrl),
   title: {
-    default: "",
+    default: "Portal Berita Mahasiswa | LPM Reaksi FST UIN Bandung",
     template: "%s | LPM Reaksi",
   },
   description:
