@@ -28,7 +28,7 @@ const lora = Lora({
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
   title: {
-    default: "Portal Berita Mahasiswa | LPM Reaksi FST UIN Bandung",
+    default: "LPM Reaksi | Portal Berita",
     template: "%s | LPM Reaksi",
   },
   description:
@@ -61,8 +61,10 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from "react";
 import { AuthProvider } from "@/lib/auth/authContext";
 import ConsoleErrorShield from "@/components/common/ConsoleErrorShield";
+import NavigationProgress from "@/components/common/NavigationProgress";
 
 export default function RootLayout({
   children,
@@ -96,6 +98,9 @@ export default function RootLayout({
           }}
         />
         <ConsoleErrorShield />
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <ThemeProvider
           attribute="data-theme"
           defaultTheme="light"

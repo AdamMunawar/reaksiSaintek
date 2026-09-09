@@ -421,3 +421,45 @@
 ::-webkit-scrollbar-track { background: var(--color-wall); }
 ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+/* ── SMOOTH PAGE TRANSITIONS & MICRO-ANIMATIONS ── */
+@keyframes fadeInPage {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main {
+  animation: fadeInPage 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Article card image smooth zoom */
+.group:hover img {
+  will-change: transform;
+}
+
+/* Smooth link / interactive button transitions */
+a, button {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth continuous ticker animation */
+@keyframes tickerGlide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: inline-flex;
+  animation: tickerGlide 28s linear infinite;
+  will-change: transform;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
