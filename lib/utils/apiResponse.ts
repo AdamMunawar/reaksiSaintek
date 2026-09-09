@@ -3,8 +3,11 @@ import type { NextRequest } from 'next/server';
 
 /**
  * Smart Error Response Generator for LPM Reaksi.
- * - If called from a web browser (accept: text/html), renders a beautiful, styled error UI.
- * - If called from API fetch/curl (accept: application/json or non-html), returns clean JSON.
+ * Adheres strictly to the LPM Reaksi Editorial Bold design system:
+ * - Color palette: #f4f4f0 (wall), #ffffff (surface), #1a1a1a (keyline), #1d4ed8 (blue accent)
+ * - Sharp 2px-3px panel radii, hard offset shadows (3px 3px 0 0 #1d4ed8), uppercase stencil typography
+ * - Serves rich branded HTML for browser requests (accept: text/html)
+ * - Serves standard JSON { error: message } for API callers / fetch()
  */
 export function apiErrorResponse(
   req: NextRequest | Request,
@@ -20,15 +23,15 @@ export function apiErrorResponse(
   }
 
   const defaultTitles: Record<number, string> = {
-    400: 'Permintaan Tidak Valid',
-    401: 'Akses Ditolak (Perlu Login)',
-    403: 'Wewenang Terbatas',
-    404: 'Halaman atau Data Tidak Ditemukan',
-    405: 'Metode Tidak Diizinkan',
-    500: 'Terjadi Kesalahan Server',
+    400: 'Permintaan Tidak Sesuai Format',
+    401: 'Akses Ditolak — Sesi Diperlukan',
+    403: 'Wewenang Terbatas Meja Redaksi',
+    404: 'Naskah atau Halaman Tidak Ditemukan',
+    405: 'Metode Permintaan Tidak Diizinkan',
+    500: 'Gangguan Sistem Sementara',
   };
 
-  const title = customTitle || defaultTitles[status] || 'Terjadi Kendala';
+  const title = customTitle || defaultTitles[status] || 'Pemberitahuan Sistem';
 
   const html = `<!DOCTYPE html>
 <html lang="id">
@@ -39,200 +42,335 @@ export function apiErrorResponse(
   <link rel="icon" href="/icon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #090d16;
-      --card: #111827;
-      --border: #1f2937;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --gradient-status: linear-gradient(135deg, #f59e0b, #d97706);
+      --color-wall: #f4f4f0;
+      --color-surface: #ffffff;
+      --color-foreground: #0d0f0c;
+      --color-muted: #6b7280;
+      --color-line: #d1d5db;
+      --color-keyline: #1a1a1a;
+      --color-accent: #1d4ed8;
+      --color-accent-hover: #1e40af;
+      --color-accent-pale: #dbeafe;
+      --shadow-offset: 4px 4px 0 0 #1d4ed8;
+      --header-border: #1a1a1a;
+      --logo-light-display: block;
+      --logo-dark-display: none;
     }
-    @media (prefers-color-scheme: light) {
+    @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #f8fafc;
-        --card: #ffffff;
-        --border: #e2e8f0;
-        --text: #0f172a;
-        --muted: #64748b;
-        --accent: #2563eb;
-        --accent-hover: #1d4ed8;
-        --gradient-status: linear-gradient(135deg, #d97706, #b45309);
+        --color-wall: #0d0f0c;
+        --color-surface: #161917;
+        --color-foreground: #f4f4ef;
+        --color-muted: #9ca3af;
+        --color-line: #374151;
+        --color-keyline: #f4f4ef;
+        --color-accent: #3b82f6;
+        --color-accent-hover: #2563eb;
+        --color-accent-pale: #1e3a8a;
+        --shadow-offset: 4px 4px 0 0 #3b82f6;
+        --header-border: #374151;
+        --logo-light-display: none;
+        --logo-dark-display: block;
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background-color: var(--color-wall);
+      color: var(--color-foreground);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
+      justify-content: space-between;
+      -webkit-font-smoothing: antialiased;
       line-height: 1.6;
     }
-    .container {
-      max-width: 540px;
+    
+    /* Top Bar */
+    .top-header {
+      background-color: var(--color-surface);
+      border-bottom: 2px solid var(--color-keyline);
+      padding: 12px 20px;
+    }
+    .header-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .brand-logo-light {
+      display: var(--logo-light-display);
+      height: 30px;
+      width: auto;
+    }
+    .brand-logo-dark {
+      display: var(--logo-dark-display);
+      height: 30px;
+      width: auto;
+    }
+    .brand-tagline {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      border-left: 2px solid var(--color-accent);
+      padding-left: 10px;
+      color: var(--color-muted);
+      display: inline-block;
+    }
+    .header-nav-link {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-foreground);
+      text-decoration: none;
+      padding: 6px 12px;
+      border: 1px solid var(--color-line);
+      transition: all 0.15s ease;
+    }
+    .header-nav-link:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    /* Main Area */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .editorial-card {
+      max-width: 580px;
       width: 100%;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 44px 32px;
+      background: var(--color-surface);
+      border: 2px solid var(--color-keyline);
+      box-shadow: var(--shadow-offset);
+      border-radius: 2px;
+      padding: 40px 32px;
       text-align: center;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
-      animation: fadeIn 0.35s ease-out;
+      position: relative;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(14px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    /* Registration Ticks (LPM Reaksi aesthetic) */
+    .corner-tick {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: var(--color-keyline);
     }
-    .brand-header {
+    .tick-tl { top: -2px; left: -2px; border-top: 2px solid; border-left: 2px solid; }
+    .tick-tr { top: -2px; right: -2px; border-top: 2px solid; border-right: 2px solid; }
+    .tick-bl { bottom: -2px; left: -2px; border-bottom: 2px solid; border-left: 2px solid; }
+    .tick-br { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; }
+
+    .badge-stencil {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      padding: 6px 16px;
-      background: rgba(37, 99, 235, 0.08);
-      border: 1px solid rgba(37, 99, 235, 0.2);
-      border-radius: 9999px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
-    .status-badge {
-      font-size: 76px;
-      font-weight: 900;
-      letter-spacing: -0.05em;
-      line-height: 1;
-      margin-bottom: 12px;
-      background: var(--gradient-status);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    h1 {
-      font-size: 22px;
+      gap: 6px;
+      background-color: var(--color-accent);
+      color: #ffffff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
       font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 2px;
+      margin-bottom: 16px;
     }
-    .message {
-      color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 28px;
+
+    .error-code {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 68px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: var(--color-foreground);
+      margin-bottom: 8px;
+    }
+
+    .error-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 19px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      color: var(--color-foreground);
+      margin-bottom: 12px;
+    }
+
+    .error-message {
+      font-size: 13px;
+      color: var(--color-muted);
       max-width: 440px;
-      margin-left: auto;
-      margin-right: auto;
+      margin: 0 auto 28px auto;
+      line-height: 1.6;
     }
-    .actions {
+
+    .button-group {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
       justify-content: center;
       margin-bottom: 24px;
     }
+
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 11px 22px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 2px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       text-decoration: none;
-      transition: all 0.2s ease;
       cursor: pointer;
+      transition: transform 0.15s ease, background-color 0.15s ease;
     }
     .btn-primary {
-      background: var(--accent);
+      background-color: var(--color-accent);
       color: #ffffff;
-      border: 1px solid var(--accent);
+      border: 1px solid var(--color-accent);
     }
     .btn-primary:hover {
-      background: var(--accent-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      background-color: var(--color-accent-hover);
+      transform: translateY(-1px);
     }
     .btn-secondary {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
+      background-color: transparent;
+      color: var(--color-foreground);
+      border: 1px solid var(--color-line);
     }
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: var(--muted);
-      transform: translateY(-2px);
+      border-color: var(--color-keyline);
+      transform: translateY(-1px);
     }
+
+    /* Tech details */
     details {
+      border-top: 1px solid var(--color-line);
+      margin-top: 20px;
+      padding-top: 16px;
       text-align: left;
-      margin-top: 24px;
-      padding-top: 18px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
     }
     summary {
-      color: var(--muted);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-muted);
       cursor: pointer;
-      font-weight: 600;
       user-select: none;
       outline: none;
     }
     summary:hover {
-      color: var(--text);
+      color: var(--color-accent);
     }
     pre {
-      margin-top: 12px;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 14px;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
-      color: #38bdf8;
-      border: 1px solid var(--border);
-    }
-    .footer-note {
-      margin-top: 24px;
+      margin-top: 10px;
+      background-color: var(--color-wall);
+      border: 1px solid var(--color-line);
+      padding: 12px;
       font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 0.02em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      color: var(--color-foreground);
+      overflow-x: auto;
+      border-radius: 2px;
+    }
+
+    /* Footer */
+    .footer-bar {
+      background-color: var(--color-surface);
+      border-top: 1px solid var(--color-line);
+      padding: 14px 20px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--color-muted);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    @media (max-width: 480px) {
+      .editorial-card { padding: 32px 20px; }
+      .brand-tagline { display: none; }
+      .error-code { font-size: 54px; }
+      .error-title { font-size: 16px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="brand-header">
-      <span>Portal Berita LPM Reaksi</span>
-    </div>
-    <div class="status-badge">${status}</div>
-    <h1>${title}</h1>
-    <p class="message">${message}</p>
-    <div class="actions">
-      <a href="/" class="btn btn-primary">
-        ← Kembali ke Beranda
+  <!-- Header Banner -->
+  <header class="top-header">
+    <div class="header-content">
+      <a href="/" class="brand-group" aria-label="LPM Reaksi">
+        <img src="/images/reaksi.png" alt="Logo LPM Reaksi" class="brand-logo-light" />
+        <img src="/images/reaksi-dark.png" alt="Logo LPM Reaksi" class="brand-logo-dark" />
+        <span class="brand-tagline">Tumbuh, Berkembang, Bersama</span>
       </a>
-      <a href="/cari" class="btn btn-secondary">
-         Cari Berita
-      </a>
+      <a href="/" class="header-nav-link">Beranda Portal</a>
     </div>
-    <details>
-      <summary>Lihat Respon Teknis (JSON Raw)</summary>
-      <pre>HTTP/1.1 ${status}
+  </header>
+
+  <!-- Main Card -->
+  <main class="main-wrapper">
+    <div class="editorial-card">
+      <div class="corner-tick tick-tl"></div>
+      <div class="corner-tick tick-tr"></div>
+      <div class="corner-tick tick-bl"></div>
+      <div class="corner-tick tick-br"></div>
+
+      <div class="badge-stencil">
+        <span>Warta Redaksi</span>
+      </div>
+
+      <div class="error-code">${status}</div>
+      <h1 class="error-title">${title}</h1>
+      <p class="error-message">${message}</p>
+
+      <div class="button-group">
+        <a href="/" class="btn btn-primary">
+          ← Kembali ke Beranda
+        </a>
+        <a href="/cari" class="btn btn-secondary">
+          Cari di Portal
+        </a>
+      </div>
+
+      <details>
+        <summary>Informasi Teknis Endpoint (JSON)</summary>
+        <pre>HTTP/1.1 ${status}
 Content-Type: application/json
 
 ${JSON.stringify({ error: message, status, timestamp: new Date().toISOString() }, null, 2)}</pre>
-    </details>
-    <div class="footer-note">
-      Lembaga Pers Mahasiswa Reaksi FST UIN SGD Bandung
+      </details>
     </div>
-  </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer-bar">
+    © 2026 LPM Reaksi Saintek · UIN Sunan Gunung Djati Bandung
+  </footer>
 </body>
 </html>`;
 
