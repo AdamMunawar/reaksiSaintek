@@ -199,7 +199,8 @@ export default function ArticleViewCore({
 
   // ── Copy link handler ──────────────────────────────────────────────────────
   const handleCopyLink = useCallback(() => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
+    let url = typeof window !== 'undefined' ? window.location.href : '';
+    url = url.replace(/-+$/, '');
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -316,13 +317,15 @@ export default function ArticleViewCore({
   }
 
   const handleShareWhatsApp = useCallback(() => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
+    let url = typeof window !== 'undefined' ? window.location.href : '';
+    url = url.replace(/-+$/, '');
     const text = `${article.title}\n\n${url}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   }, [article.title]);
 
   const handleShareTwitter = useCallback(() => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
+    let url = typeof window !== 'undefined' ? window.location.href : '';
+    url = url.replace(/-+$/, '');
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener,noreferrer');
   }, [article.title]);
 

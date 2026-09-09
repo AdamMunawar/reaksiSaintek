@@ -147,13 +147,77 @@ function HorizCard({ article }: { article: any }) {
   );
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function EditorialSkeleton({ message }: { message: string }) {
+  return (
+    <div className="py-8 space-y-8 animate-pulse">
+      {/* Live Logging Status Card */}
+      <div
+        className="p-4 sm:p-5 rounded-md flex items-center justify-between gap-4 border"
+        style={{
+          background: 'var(--color-surface)',
+          borderColor: 'var(--color-line)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
+          </span>
+          <div>
+            <p className="text-xs sm:text-sm font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}>
+              {message}
+            </p>
+            <p className="text-[11px]" style={{ color: 'var(--color-muted)' }}>
+              Menghubungkan ke database LPM Reaksi...
+            </p>
+          </div>
+        </div>
+        <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold">
+          <span className="animate-spin inline-block">⏳</span> Memuat data berita...
+        </div>
+      </div>
+
+      {/* Hero Skeleton Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Lead Skeleton */}
+        <div className="lg:col-span-8 space-y-4">
+          <div className="w-full aspect-[16/9] rounded-lg bg-gray-200 dark:bg-slate-800" />
+          <div className="w-24 h-4 rounded bg-blue-200 dark:bg-blue-900/50" />
+          <div className="w-3/4 h-7 rounded bg-gray-200 dark:bg-slate-800" />
+          <div className="space-y-2">
+            <div className="w-full h-3.5 rounded bg-gray-100 dark:bg-slate-800/60" />
+            <div className="w-5/6 h-3.5 rounded bg-gray-100 dark:bg-slate-800/60" />
+          </div>
+        </div>
+
+        {/* Sidebar Headlines Skeleton */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="w-36 h-5 rounded bg-gray-200 dark:bg-slate-800 mb-4" />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-3 pb-4 border-b" style={{ borderColor: 'var(--color-line)' }}>
+              <div className="w-20 h-16 rounded bg-gray-200 dark:bg-slate-800 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="w-16 h-3 rounded bg-blue-100 dark:bg-blue-950" />
+                <div className="w-full h-4 rounded bg-gray-200 dark:bg-slate-800" />
+                <div className="w-2/3 h-3 rounded bg-gray-100 dark:bg-slate-800/60" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    HOMEPAGE COMPONENT
-   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   ───────────────────────────────────────────────────────────────────────────── */
 export default function HomePage() {
   const [allArticles, setAllArticles] = useState<Article[]>([]);
   const [rubriks, setRubriks] = useState<RubrikItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('fetching');
+  const [syncMessage, setSyncMessage] = useState('Mengambil data berita terkini ...');
 
   useEffect(() => {
     const loaded = getAllActiveArticles();
@@ -161,16 +225,33 @@ export default function HomePage() {
     setRubriks(db.getRubriks());
     setIsLoaded(true);
 
+    console.info('📡 [LPM Reaksi] Mengambil data berita terkini dari server PostgreSQL Supabase...');
+    setSyncStatus('fetching');
+    setSyncMessage('Mengambil data liputan berita dari server...');
+
     // Live sync dari PostgreSQL Supabase
     fetch('/api/articles?status=PUBLISHED')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
+          console.info(`✅ [LPM Reaksi] Sukses memuat ${data.length} berita dari database.`);
           db.syncArticlesFromRemote(data);
           setAllArticles(getAllActiveArticles());
+          setSyncStatus('success');
+          setSyncMessage(`Sinkronisasi selesai: ${data.length} berita berhasil dimuat.`);
+        } else {
+          setSyncStatus('idle');
         }
+        setTimeout(() => {
+          setSyncStatus('idle');
+        }, 3000);
       })
-      .catch((err) => console.warn('Fetch live homepage articles error:', err));
+      .catch((err) => {
+        console.warn('Fetch live homepage articles error:', err);
+        setSyncStatus('error');
+        setSyncMessage('Menggunakan data cadangan lokal.');
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      });
 
     const sync = () => {
       setAllArticles(getAllActiveArticles());

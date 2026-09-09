@@ -207,9 +207,10 @@ export function timeAgo(dateStr?: string): string {
  * Fallback:     /artikel/[slug]
  */
 export function getArticleUrl(article: { rubrik?: string | null; slug: string }): string {
-  if (article.rubrik && article.slug) {
-    return `/${article.rubrik}/${article.slug}`;
+  const cleanSlug = (article.slug || '').replace(/-+$/, '');
+  if (article.rubrik && cleanSlug) {
+    return `/${article.rubrik}/${cleanSlug}`;
   }
-  return `/artikel/${article.slug}`;
+  return `/artikel/${cleanSlug}`;
 }
 
