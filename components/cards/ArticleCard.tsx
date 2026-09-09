@@ -20,6 +20,7 @@ function articleHref(article: Article): string {
 
 export default function ArticleCard({ article, variant = 'default' }: ArticleCardProps) {
   const href = articleHref(article);
+  const isInfografik = article.rubrik === 'infografik';
 
   /* ── HORIZONTAL VARIANT (Sidebar & Lists) ── */
   if (variant === 'horizontal') {
@@ -39,7 +40,7 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
             {article.readTime} menit · {formatDate(article.publishedAt)}
           </p>
         </div>
-        <div className="relative w-28 h-20 sm:w-32 sm:h-22 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-slate-800">
+        <div className={`relative ${isInfografik ? 'w-20 h-28 sm:w-24 sm:h-32' : 'w-28 h-20 sm:w-32 sm:h-22'} rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-slate-800`}>
           <Image
             src={article.thumbnail}
             alt={article.title}
@@ -47,6 +48,13 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
             sizes="(max-width: 640px) 112px, 128px"
             className="object-cover group-hover:scale-103 transition-transform duration-500"
           />
+          {isInfografik && (
+            <div className="absolute bottom-1 right-1 z-10">
+              <span className="bg-orange-600/90 text-white font-bold text-[8px] uppercase tracking-wider px-1 py-0.5 rounded shadow-sm">
+                A3/A4
+              </span>
+            </div>
+          )}
         </div>
       </Link>
     );
@@ -70,8 +78,8 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
       href={href}
       className="group block cursor-pointer transition-opacity hover:opacity-95"
     >
-      {/* Clean photo with rounded-xl */}
-      <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 mb-3.5">
+      {/* Photo with aspect-[16/10] or Poster with aspect-[3/4] for A3/A4 infographics */}
+      <div className={`relative w-full ${isInfografik ? 'aspect-[3/4] border border-orange-500/20 shadow-md' : 'aspect-[16/10]'} rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 mb-3.5`}>
         <Image
           src={article.thumbnail}
           alt={article.title}
@@ -79,6 +87,13 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover group-hover:scale-102 transition-transform duration-500"
         />
+        {isInfografik && (
+          <div className="absolute top-2.5 left-2.5 z-10">
+            <span className="bg-orange-600/95 text-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded shadow">
+              Poster A3/A4
+            </span>
+          </div>
+        )}
       </div>
 
       <div>

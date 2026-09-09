@@ -56,6 +56,14 @@ export default function AdminEPaperPage() {
 
   const loadData = () => {
     setEpapers(db.getEPapers());
+    fetch('/api/epapers')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setEpapers(data);
+        }
+      })
+      .catch(() => {});
   };
 
   const handleOpenAdd = () => {
@@ -86,7 +94,7 @@ export default function AdminEPaperPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       setNotification({ type: 'error', message: 'Judul terbitan E-Paper wajib diisi.' });
@@ -105,7 +113,7 @@ export default function AdminEPaperPage() {
       return;
     }
 
-    db.saveEPaper({
+    const payload = {
       id: editId || undefined,
       title: title.trim(),
       edition: edition.trim(),
@@ -115,7 +123,21 @@ export default function AdminEPaperPage() {
       description: description.trim(),
       fileSize: pdfFileSize || 'Unknown',
       publishedAt,
-    });
+    };
+
+    // Save locally first for instant reactivity
+    db.saveEPaper(payload);
+
+    // Sync with API/PostgreSQL
+    try {
+      await fetch('/api/epapers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      console.warn('API epapers post error:', err);
+    }
 
     setNotification({
       type: 'success',
@@ -126,9 +148,14 @@ export default function AdminEPaperPage() {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!epaperToDelete) return;
     db.deleteEPaper(epaperToDelete.id);
+    try {
+      await fetch(`/api/epapers?id=${epaperToDelete.id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('API epapers delete error:', err);
+    }
     setNotification({
       type: 'success',
       message: `Terbitan "${epaperToDelete.title}" berhasil dihapus.`,

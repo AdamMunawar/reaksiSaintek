@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "X-Frame-Options",
-            value: "DENY",
+            value: "SAMEORIGIN",
           },
           {
             key: "Referrer-Policy",
@@ -57,11 +57,11 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https:",
               "media-src 'self' https:",
-              "object-src 'none'",
+              "object-src 'self' blob: data:",
               "base-uri 'self'",
               "form-action 'self'",
-              "frame-ancestors 'none'",
-              "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://open.spotify.com",
+              "frame-ancestors 'self'",
+              "frame-src 'self' blob: data: https: https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://*.supabase.co https://drive.google.com https://docs.google.com",
               "connect-src 'self' https: wss: ws:",
               "upgrade-insecure-requests",
             ].join("; "),

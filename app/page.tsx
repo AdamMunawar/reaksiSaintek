@@ -37,6 +37,9 @@ export const metadata: Metadata = {
   },
 };
 
+import { db } from '@/backend/db/repository';
+import { EPaperItem } from '@/backend/db/schema';
+
 async function getInitialArticles(): Promise<Article[]> {
   try {
     if (process.env.DATABASE_URL) {
@@ -74,7 +77,42 @@ async function getInitialArticles(): Promise<Article[]> {
   return getAllActiveArticles();
 }
 
+async function getInitialEPapers(): Promise<EPaperItem[]> {
+  try {
+    if (process.env.DATABASE_URL) {
+      const res = await query(
+        `SELECT * FROM epapers 
+         ORDER BY COALESCE(published_at, created_at) DESC 
+         LIMIT 6;`
+      );
+      if (res && res.rows && res.rows.length > 0) {
+        return res.rows.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          edition: r.edition,
+          category: r.category || 'BULETIN',
+          coverImage: r.cover_image,
+          pdfUrl: r.pdf_url,
+          description: r.description || '',
+          pageCount: r.page_count || 1,
+          fileSize: r.file_size || '',
+          publishedAt: r.published_at ? new Date(r.published_at).toISOString().split('T')[0] : '',
+          downloads: r.downloads || 0,
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : '',
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('[SSR HomePage] PostgreSQL epapers query warning:', err);
+  }
+
+  return db.getEPapers().slice(0, 6);
+}
+
 export default async function HomePage() {
-  const initialArticles = await getInitialArticles();
-  return <HomePageClient initialArticles={initialArticles} />;
+  const [initialArticles, initialEPapers] = await Promise.all([
+    getInitialArticles(),
+    getInitialEPapers(),
+  ]);
+  return <HomePageClient initialArticles={initialArticles} initialEPapers={initialEPapers} />;
 }

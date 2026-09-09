@@ -29,6 +29,8 @@ import {
   AlignLeft,
   AlignCenter,
   History,
+  Sparkles,
+  Maximize2,
 } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { cleanArticleHtml } from '@/lib/utils/cleanHtml';
@@ -495,19 +497,53 @@ export default function ArticleViewCore({
           </div>
         </div>
 
-        {/* Featured Photo */}
+        {/* Featured Photo / Poster Infografik A3/A4 */}
         {article.thumbnail && (
           <div className="mb-8 sm:mb-12 w-full">
-            <div
-              className="relative w-full overflow-hidden border mb-2 rounded-sm"
-              style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-line)' }}
-            >
-              <img
-                src={article.thumbnail}
-                alt={article.title}
-                className="w-full h-auto max-h-[560px] object-cover aspect-[16/10] sm:aspect-[16/9]"
-              />
-            </div>
+            {article.rubrik === 'infografik' ? (
+              <div
+                className="relative w-full max-w-3xl mx-auto overflow-hidden border rounded-sm shadow-md transition-shadow"
+                style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-line)' }}
+              >
+                <img
+                  src={article.thumbnail}
+                  alt={article.title}
+                  className="w-full h-auto object-contain mx-auto"
+                />
+                <div
+                  className="p-3 border-t flex items-center justify-between gap-3 text-xs flex-wrap"
+                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-line)' }}
+                >
+                  <span className="font-bold text-orange-600 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                    <Sparkles size={13} />
+                    Format Poster A3/A4 (Data Visual)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={article.thumbnail}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold text-white transition-colors hover:opacity-90"
+                      style={{ backgroundColor: 'var(--color-accent)' }}
+                    >
+                      <Maximize2 size={12} />
+                      <span>Buka Ukuran Penuh</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="relative w-full overflow-hidden border mb-2 rounded-sm"
+                style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-line)' }}
+              >
+                <img
+                  src={article.thumbnail}
+                  alt={article.title}
+                  className="w-full h-auto max-h-[560px] object-cover aspect-[16/10] sm:aspect-[16/9]"
+                />
+              </div>
+            )}
             {article.coverCaption && (
               <p className="text-[11px] sm:text-xs text-center italic mt-1.5" style={{ color: 'var(--color-muted)' }}>
                 {article.coverCaption}

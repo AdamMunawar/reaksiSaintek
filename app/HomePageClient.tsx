@@ -14,8 +14,8 @@ import {
   getArticleUrl,
 } from '@/lib/data';
 import { db } from '@/backend/db/repository';
-import { RubrikItem } from '@/backend/db/schema';
-import { ArrowRight, Clock, TrendingUp, Sparkles, Newspaper, PenTool, BookOpen } from 'lucide-react';
+import { RubrikItem, EPaperItem } from '@/backend/db/schema';
+import { ArrowRight, Clock, TrendingUp, Sparkles, Newspaper, PenTool, BookOpen, Download } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 
@@ -152,12 +152,14 @@ function HorizCard({ article }: { article: any }) {
    ───────────────────────────────────────────────────────────────────────────── */
 interface HomePageClientProps {
   initialArticles?: Article[];
+  initialEPapers?: EPaperItem[];
 }
 
-export default function HomePageClient({ initialArticles = [] }: HomePageClientProps) {
+export default function HomePageClient({ initialArticles = [], initialEPapers = [] }: HomePageClientProps) {
   const [allArticles, setAllArticles] = useState<Article[]>(initialArticles);
+  const [epapers, setEpapers] = useState<EPaperItem[]>(initialEPapers);
   const [rubriks, setRubriks] = useState<RubrikItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(initialArticles.length > 0);
+  const [isLoaded, setIsLoaded] = useState(initialArticles.length > 0 || initialEPapers.length > 0);
   const [topProgressActive, setTopProgressActive] = useState(initialArticles.length === 0);
 
   useEffect(() => {
@@ -184,6 +186,12 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
       setRubriks(db.getRubriks());
     }
 
+    if (initialEPapers.length > 0) {
+      setEpapers(initialEPapers);
+    } else {
+      setEpapers(db.getEPapers().slice(0, 6));
+    }
+
     // Live background sync from PostgreSQL API
     fetch('/api/articles?status=PUBLISHED')
       .then((res) => (res.ok ? res.json() : null))
@@ -199,13 +207,26 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
         setIsLoaded(true);
       });
 
+    // Live background sync for epapers
+    fetch('/api/epapers?limit=6')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setEpapers(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Fetch live homepage epapers error:', err);
+      });
+
     const sync = () => {
       setAllArticles(getAllActiveArticles());
       setRubriks(db.getRubriks());
+      setEpapers(db.getEPapers().slice(0, 6));
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
-  }, [initialArticles]);
+  }, [initialArticles, initialEPapers]);
 
   const latestFallback = allArticles;
   const featuredArticles = allArticles.filter((a) => a.isFeatured);
@@ -882,23 +903,59 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
                       </div>
                     )}
 
-                    {/* DATA VISUAL */}
+                    {/* DATA VISUAL (INFOGRAFIK POSTER A3/A4) */}
                     {infografik.length > 0 && (
                       <div style={{ borderLeft: lensaKata.length > 0 ? '1px solid var(--color-line)' : 'none' }} className={lensaKata.length > 0 ? 'lg:pl-8' : ''}>
                         <SectionHeader title="Data Visual" href="/infografik" color="#ea580c" />
-                        <div>
+                        <div className="space-y-6">
                           {infografik.map((item) => (
                             <Link
                               key={item.id}
                               href={getArticleUrl(item)}
-                              className="group block mb-4"
+                              className="group block"
                             >
-                              <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', borderRadius: 3, marginBottom: 8 }}>
+                              {/* Poster Frame dengan Rasio Vertikal A3/A4 (3:4) */}
+                              <div
+                                style={{
+                                  position: 'relative',
+                                  width: '100%',
+                                  aspectRatio: '3/4',
+                                  overflow: 'hidden',
+                                  borderRadius: 4,
+                                  marginBottom: 10,
+                                  backgroundColor: 'rgba(0,0,0,0.03)',
+                                  border: '1px solid var(--color-line)',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                }}
+                              >
                                 <img
                                   src={item.thumbnail}
                                   alt={item.title}
                                   className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                                 />
+                                {/* Poster format badge */}
+                                <div className="absolute top-2.5 left-2.5 z-10">
+                                  <span
+                                    style={{
+                                      backgroundColor: '#ea580c',
+                                      color: '#ffffff',
+                                      fontFamily: 'var(--font-display)',
+                                      fontWeight: 800,
+                                      fontSize: '9px',
+                                      letterSpacing: '0.08em',
+                                      textTransform: 'uppercase',
+                                      padding: '3px 7px',
+                                      borderRadius: 2,
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 3,
+                                    }}
+                                  >
+                                    <Sparkles size={10} />
+                                    Poster A3/A4
+                                  </span>
+                                </div>
                               </div>
                               <h4 style={{
                                 fontFamily: 'var(--font-display)',
@@ -951,6 +1008,333 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
                 </section>
               </>
             )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                ZONE: E-PAPER & TABLOID DIGITAL
+                ══════════════════════════════════════════════════════════════ */}
+            <Rule />
+            <section className="pb-8">
+              <SectionHeader
+                title="E-Paper & Tabloid Mahasiswa"
+                href="/e-paper"
+                color="#2563eb"
+              />
+
+              {epapers.length > 0 ? (
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '2px solid var(--color-keyline)',
+                    boxShadow: 'var(--shadow-hard)',
+                    borderRadius: 4,
+                  }}
+                  className="p-5 sm:p-7 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8"
+                >
+                  {/* FEATURED / LATEST EDITION */}
+                  {(() => {
+                    const latest = epapers[0];
+                    const catColors: Record<string, string> = {
+                      BULETIN: '#2563eb',
+                      TABLOID: '#7c3aed',
+                      MAJALAH: '#059669',
+                    };
+                    const catColor = catColors[latest.category] || '#2563eb';
+
+                    return (
+                      <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                        {/* 3D BOOK / MAGAZINE COVER THUMBNAIL */}
+                        <div
+                          className="relative flex-shrink-0 group cursor-pointer"
+                          style={{
+                            width: 'clamp(170px, 28vw, 210px)',
+                            aspectRatio: '1/1.414',
+                          }}
+                        >
+                          <Link href={`/e-paper?read=${latest.id}`} className="block w-full h-full">
+                            <div
+                              className="w-full h-full relative overflow-hidden rounded-r-md rounded-l-sm transition-transform duration-500 group-hover:-translate-y-1"
+                              style={{
+                                border: '1px solid rgba(0,0,0,0.15)',
+                                boxShadow: '6px 10px 24px rgba(0,0,0,0.18), 2px 2px 6px rgba(0,0,0,0.1)',
+                              }}
+                            >
+                              <img
+                                src={latest.coverImage}
+                                alt={latest.title}
+                                className="w-full h-full object-cover"
+                              />
+                              {/* Magazine Spine Highlight */}
+                              <div
+                                className="absolute inset-y-0 left-0 w-3 pointer-events-none"
+                                style={{
+                                  background: 'linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(255,255,255,0.2) 40%, rgba(0,0,0,0.15) 100%)',
+                                }}
+                              />
+                              {/* Read overlay on hover */}
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs uppercase tracking-wider">
+                                <BookOpen size={16} />
+                                <span>Buka Reader</span>
+                              </div>
+                            </div>
+                          </Link>
+                        </div>
+
+                        {/* EDITION DETAILS & ACTIONS */}
+                        <div className="flex-1 flex flex-col justify-between py-1">
+                          <div>
+                            <div className="flex items-center gap-2.5 flex-wrap mb-2.5">
+                              <span
+                                style={{
+                                  backgroundColor: catColor,
+                                  color: '#ffffff',
+                                  fontFamily: 'var(--font-display)',
+                                  fontWeight: 800,
+                                  fontSize: '10px',
+                                  letterSpacing: '0.1em',
+                                  textTransform: 'uppercase',
+                                  padding: '2px 8px',
+                                  borderRadius: 2,
+                                }}
+                              >
+                                {latest.category} TERBARU
+                              </span>
+                              <span
+                                style={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontWeight: 700,
+                                  fontSize: '11px',
+                                  color: 'var(--color-muted)',
+                                  letterSpacing: '0.04em',
+                                }}
+                              >
+                                {latest.edition}
+                              </span>
+                            </div>
+
+                            <Link href={`/e-paper?read=${latest.id}`} className="group">
+                              <h3
+                                style={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontWeight: 800,
+                                  fontSize: 'clamp(18px, 2.2vw, 24px)',
+                                  lineHeight: 1.3,
+                                  color: 'var(--color-foreground)',
+                                  marginBottom: 8,
+                                }}
+                                className="group-hover:text-blue-600 transition-colors"
+                              >
+                                {latest.title}
+                              </h3>
+                            </Link>
+
+                            {latest.description && (
+                              <p
+                                style={{
+                                  fontSize: '13px',
+                                  color: 'var(--color-muted)',
+                                  lineHeight: 1.7,
+                                  marginBottom: 16,
+                                }}
+                                className="line-clamp-3"
+                              >
+                                {latest.description}
+                              </p>
+                            )}
+
+                            <div
+                              className="flex items-center gap-4 text-xs font-semibold mb-6 flex-wrap"
+                              style={{ color: 'var(--color-muted)' }}
+                            >
+                              {latest.publishedAt && (
+                                <span>Terbit: {formatDate(latest.publishedAt)}</span>
+                              )}
+                              {latest.pageCount && latest.pageCount > 0 && (
+                                <>
+                                  <span>&bull;</span>
+                                  <span>{latest.pageCount} Halaman</span>
+                                </>
+                              )}
+                              {latest.fileSize && (
+                                <>
+                                  <span>&bull;</span>
+                                  <span>{latest.fileSize}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* ACTION BUTTONS */}
+                          <div className="flex items-center gap-3 flex-wrap pt-2">
+                            <Link
+                              href={`/e-paper?read=${latest.id}`}
+                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm font-bold text-xs uppercase tracking-wider text-white transition-transform hover:-translate-y-0.5"
+                              style={{
+                                backgroundColor: 'var(--color-accent)',
+                                fontFamily: 'var(--font-display)',
+                                boxShadow: '0 2px 8px rgba(29, 78, 216, 0.3)',
+                              }}
+                            >
+                              <BookOpen size={14} />
+                              <span>Baca E-Paper</span>
+                            </Link>
+
+                            {latest.pdfUrl && (
+                              <a
+                                href={latest.pdfUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-xs uppercase tracking-wider border transition-colors hover:bg-stone-100 dark:hover:bg-stone-800"
+                                style={{
+                                  borderColor: 'var(--color-line)',
+                                  color: 'var(--color-foreground)',
+                                  fontFamily: 'var(--font-display)',
+                                }}
+                              >
+                                <Download size={14} />
+                                <span>Unduh PDF</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* PREVIOUS EDITIONS LIST */}
+                  <div
+                    className="border-t lg:border-t-0 lg:border-l pt-6 lg:pt-0 lg:pl-8 flex flex-col justify-between"
+                    style={{ borderColor: 'var(--color-line)' }}
+                  >
+                    <div>
+                      <h4
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontWeight: 800,
+                          fontSize: '11px',
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: 'var(--color-muted)',
+                          marginBottom: 14,
+                        }}
+                      >
+                        Arsip Terbitan Lainnya
+                      </h4>
+
+                      {epapers.length > 1 ? (
+                        <div className="space-y-3.5">
+                          {epapers.slice(1, 4).map((prev) => (
+                            <Link
+                              key={prev.id}
+                              href={`/e-paper?read=${prev.id}`}
+                              className="group flex gap-3.5 items-center p-2 rounded hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+                            >
+                              <div
+                                className="relative w-12 aspect-[3/4] flex-shrink-0 overflow-hidden rounded shadow-sm border"
+                                style={{ borderColor: 'var(--color-line)' }}
+                              >
+                                <img
+                                  src={prev.coverImage}
+                                  alt={prev.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span
+                                  style={{
+                                    fontSize: '9px',
+                                    fontWeight: 700,
+                                    color: 'var(--color-accent)',
+                                    fontFamily: 'var(--font-display)',
+                                    letterSpacing: '0.06em',
+                                    textTransform: 'uppercase',
+                                    display: 'block',
+                                  }}
+                                >
+                                  {prev.edition}
+                                </span>
+                                <h5
+                                  style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontWeight: 700,
+                                    fontSize: '12px',
+                                    color: 'var(--color-foreground)',
+                                    lineHeight: 1.35,
+                                  }}
+                                  className="line-clamp-2 group-hover:text-blue-600 transition-colors"
+                                >
+                                  {prev.title}
+                                </h5>
+                                <span style={{ fontSize: '10.5px', color: 'var(--color-muted)' }}>
+                                  {formatDate(prev.publishedAt)}
+                                </span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-[var(--color-muted)] leading-relaxed italic">
+                          Belum ada arsip edisi sebelumnya. Terbitan berikutnya akan otomatis diarsipkan di sini.
+                        </p>
+                      )}
+                    </div>
+
+                    <Link
+                      href="/e-paper"
+                      className="mt-5 inline-flex items-center justify-center gap-1.5 w-full py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-accent)] border border-blue-600/30 hover:bg-blue-600/5 rounded transition-colors"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                      <span>Jelajahi Semua Edisi</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                /* EMPTY STATE / EDITORIAL TEASER IF NO EPAPERS YET */
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    border: '2px solid var(--color-keyline)',
+                    boxShadow: 'var(--shadow-hard)',
+                    borderRadius: 4,
+                  }}
+                  className="p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6"
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}
+                    >
+                      <BookOpen size={28} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontWeight: 800,
+                          fontSize: '16px',
+                          color: 'var(--color-foreground)',
+                          marginBottom: 4,
+                        }}
+                      >
+                        Penerbitan Tabloid & Buletin Digital Mahasiswa
+                      </h3>
+                      <p style={{ fontSize: '13px', color: 'var(--color-muted)', maxWidth: 540 }}>
+                        LPM Reaksi menerbitkan produk jurnalistik berkala cetak & digital dalam format majalah/tabloid A4 interaktif. Redaksi dapat mengunggah edisi baru melalui panel admin.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/e-paper"
+                    className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white rounded-sm transition-transform hover:-translate-y-0.5"
+                    style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+                  >
+                    <span>Kunjungi Laman E-Paper</span>
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              )}
+            </section>
 
             <Rule />
 

@@ -37,10 +37,34 @@ export default function EPaperPublicPage() {
 
   useEffect(() => {
     loadData();
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const readId = urlParams.get('read');
+      if (readId) {
+        const found = db.getEPaperById(readId);
+        if (found) setReadingItem(found);
+      }
+    }
   }, []);
 
   const loadData = () => {
     setEpapers(db.getEPapers());
+    fetch('/api/epapers')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setEpapers(data);
+          if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const readId = urlParams.get('read');
+            if (readId) {
+              const found = data.find((e: EPaperItem) => e.id === readId);
+              if (found) setReadingItem(found);
+            }
+          }
+        }
+      })
+      .catch(() => {});
   };
 
   const filteredEpapers = epapers.filter((e) => {
@@ -339,12 +363,34 @@ export default function EPaperPublicPage() {
           </div>
 
           {/* PDF Viewer Frame */}
-          <div className="flex-1 w-full h-full bg-zinc-950 p-2 sm:p-4 flex items-center justify-center">
+          <div className="flex-1 w-full h-full bg-zinc-950 p-2 sm:p-4 flex flex-col items-center justify-center">
             <iframe
               src={`${readingItem.pdfUrl}#toolbar=1&navpanes=0`}
               title={readingItem.title}
-              className="w-full h-full rounded-sm border border-zinc-800 shadow-2xl bg-white"
+              className="w-full h-full flex-1 rounded-sm border border-zinc-800 shadow-2xl bg-white"
             />
+            <div className="mt-2 text-center text-xs text-zinc-400 flex items-center justify-center gap-3 flex-wrap">
+              <span>Kendala memuat pratinjau?</span>
+              <a
+                href={readingItem.pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline font-medium inline-flex items-center gap-1"
+              >
+                <span>Buka PDF di Tab Baru</span>
+                <ExternalLink size={11} />
+              </a>
+              <span>&bull;</span>
+              <a
+                href={`https://docs.google.com/viewer?url=${encodeURIComponent(readingItem.pdfUrl)}&embedded=true`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-400 hover:text-amber-300 underline font-medium inline-flex items-center gap-1"
+              >
+                <span>Buka via Google Docs Viewer</span>
+                <ExternalLink size={11} />
+              </a>
+            </div>
           </div>
         </div>
       )}
