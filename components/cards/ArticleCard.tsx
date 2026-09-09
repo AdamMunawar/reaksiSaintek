@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Article } from '@/lib/data';
 import { formatDate } from '@/lib/data';
+import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 
 interface ArticleCardProps {
   article: Article;
@@ -91,11 +92,9 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
         </h3>
 
         {/* Excerpt Ringkasan (Hanya ditampilkan di Card) */}
-        {article.excerpt && (
+        {(article.excerpt || article.content) && (
           <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2 font-normal">
-            {article.excerpt.endsWith('....') || article.excerpt.endsWith('...') || /[.!?]$/.test(article.excerpt.trim())
-              ? article.excerpt
-              : `${article.excerpt.trim()}....`}
+            {extractCleanExcerpt(article.excerpt, article.content, 140)}
           </p>
         )}
 

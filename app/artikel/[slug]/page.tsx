@@ -69,18 +69,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = article.title;
-  const description = extractCleanExcerpt(article.excerpt, article.content, 155) || 'Baca liputan mendalam selengkapnya di Portal Berita LPM Reaksi.';
+  const description = extractCleanExcerpt(article.excerpt, article.content, 180) || 'Baca liputan mendalam selengkapnya di Portal Berita LPM Reaksi.';
 
   // Ensure absolute image URL for WhatsApp / Telegram / Twitter crawler
   let imageUrl = `${baseUrl}/images/reaksi.png`;
   if (article.thumbnail) {
     if (article.thumbnail.startsWith('http://') || article.thumbnail.startsWith('https://')) {
       imageUrl = article.thumbnail;
+    } else if (article.thumbnail.startsWith('data:image/')) {
+      imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
     } else if (article.thumbnail.startsWith('/')) {
       imageUrl = `${baseUrl}${article.thumbnail}`;
     } else {
       imageUrl = `${baseUrl}/${article.thumbnail}`;
     }
+  } else if (article.slug || slug) {
+    imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
   }
 
   const articleUrl = article.rubrik
@@ -110,6 +114,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           secureUrl: imageUrl,
           width: 1200,
           height: 630,
+          type: 'image/jpeg',
           alt: title,
         },
       ],

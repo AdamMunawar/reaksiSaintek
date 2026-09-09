@@ -68,45 +68,48 @@ export function cleanArticleHtml(html: string): string {
 }
 
 /**
- * Extracts a clean, plain-text excerpt from the first paragraph (penggalan pertama) of content.
+ * Extracts a clean, plain-text excerpt from the first sentence (penggalan awal sampai titik pertama).
+ * Rule: "ambil penggalan awal sampai dengan titik pertama (.) jangan asal potong, kalau tidak cukup gunakan (...)"
  */
-export function extractCleanExcerpt(text?: string, fallbackContent?: string, maxLen = 160): string {
-  let source = (text && text.trim().length > 0 && !text.includes('docs-internal-guid') && !text.startsWith('<'))
-    ? text
-    : (fallbackContent || text || '');
+export function extractCleanExcerpt(text?: string, fallbackContent?: string, maxLen = 180): string {
+  // Prefer fallbackContent if it's longer/richer and text is missing or looks pre-truncated
+  let raw = '';
+  if (fallbackContent && fallbackContent.trim().length > 0 && (!text || text.endsWith('...') || text.endsWith('....') || text.length < 50)) {
+    raw = fallbackContent;
+  } else if (text && text.trim().length > 0) {
+    raw = text;
+  } else if (fallbackContent && fallbackContent.trim().length > 0) {
+    raw = fallbackContent;
+  }
 
-  if (!source) return '';
+  if (!raw) return '';
 
-  let isTruncatedFromLonger = Boolean(fallbackContent && fallbackContent.length > source.length + 30);
-
-  // Extract first meaningful text paragraph from HTML
+  // Extract first meaningful text paragraph from HTML or Markdown
+  let source = raw;
   if (source.includes('<p') || source.includes('<div')) {
     const paragraphs = source.match(/<(p|div)[^>]*>([\s\S]*?)<\/\1>/gi);
     if (paragraphs && paragraphs.length > 0) {
       for (const p of paragraphs) {
         const cleanP = p.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').trim();
-        if (cleanP.length > 10) {
+        if (cleanP.length > 15) {
           source = cleanP;
-          isTruncatedFromLonger = true;
           break;
         }
       }
     }
   } else if (source.includes('\n')) {
-    // Plain text: take first non-empty paragraph
-    const chunks = source.split(/\n\s*\n/).map((c) => c.trim()).filter((c) => c.length > 10);
+    const chunks = source.split(/\n\s*\n/).map((c) => c.trim()).filter((c) => c.length > 15);
     if (chunks.length > 0) {
       source = chunks[0];
-      isTruncatedFromLonger = true;
     }
   }
 
+  // Strip all HTML tags, docs IDs, and entities
   const stripped = source
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/docs-internal-guid-[a-f0-9-]+/gi, '')
     .replace(/<[^>]+>/g, ' ')
-    // Remove any unclosed tags at the end of the string
     .replace(/<[^>]*$/g, '')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
@@ -119,21 +122,33 @@ export function extractCleanExcerpt(text?: string, fallbackContent?: string, max
 
   if (!stripped) return '';
 
-  if (stripped.length > maxLen) {
-    let truncated = stripped.slice(0, maxLen);
-    const lastSpace = truncated.lastIndexOf(' ');
-    if (lastSpace > maxLen * 0.55) {
-      truncated = truncated.slice(0, lastSpace);
+  // Clean trailing ellipsis if present from pre-cut input
+  const cleanStripped = stripped.replace(/(\s*\.{3,}|\s*\(\.{3,}\))+$/, '').trim();
+
+  // Find the first sentence ending with a period followed by space or end of string.
+  // We check for at least 25 characters to ignore titles/abbreviations like "Dr.", "No. 1".
+  const periodRegex = /([.!?])(?=\s|$)/g;
+  let match: RegExpExecArray | null;
+  let firstSentence = '';
+  while ((match = periodRegex.exec(cleanStripped)) !== null) {
+    const candidate = cleanStripped.slice(0, match.index + 1).trim();
+    if (candidate.length >= 25) {
+      firstSentence = candidate;
+      break;
     }
-    // Remove dangling punctuation and ensure it ends with "...." as requested
-    truncated = truncated.replace(/[,;:\-\s]+$/, '');
-    return truncated.replace(/\.*$/, '') + '....';
   }
 
-  // If the excerpt is from a larger article and doesn't finish with a period, avoid hanging
-  if (isTruncatedFromLonger && !/[.!?]$/.test(stripped)) {
-    return stripped.replace(/[,;:\-\s]+$/, '') + '....';
+  // If a complete first sentence is found and fits within maxLen, return it
+  if (firstSentence && firstSentence.length <= maxLen) {
+    return firstSentence;
   }
 
-  return stripped;
+  // If sentence exceeds maxLen or no ending period was found ("kalau tidak cukup gunakan (...)")
+  let truncated = cleanStripped.slice(0, maxLen);
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > maxLen * 0.5) {
+    truncated = truncated.slice(0, lastSpace);
+  }
+  truncated = truncated.replace(/[,;:\-.\s]+$/, '');
+  return `${truncated} (...)`;
 }

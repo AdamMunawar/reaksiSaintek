@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, sanitizeArticleContent } from '@/backend/auth/security';
+import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 import { query } from '@/backend/db/postgres';
 import { db } from '@/backend/db/repository';
 
@@ -74,7 +75,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const sanitizedContent = content ? sanitizeArticleContent(content) : undefined;
-    const sanitizedExcerpt = excerpt ? sanitizeArticleContent(excerpt) : undefined;
+    const cleanExcerpt = (excerpt || content) ? extractCleanExcerpt(excerpt, content, 180) : undefined;
+    const sanitizedExcerpt = cleanExcerpt ? sanitizeArticleContent(cleanExcerpt) : undefined;
 
     // 1. Try PostgreSQL
     try {

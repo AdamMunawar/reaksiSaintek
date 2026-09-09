@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, sanitizeArticleContent } from '@/backend/auth/security';
+import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 import { query } from '@/backend/db/postgres';
 import { db } from '@/backend/db/repository';
 
@@ -107,9 +108,10 @@ export async function POST(req: NextRequest) {
       targetStatus = 'PENDING_REVIEW';
     }
 
-    // Anti-XSS Content Sanitization
+    // Anti-XSS Content Sanitization & Clean Sentence Excerpt
     const sanitizedContent = sanitizeArticleContent(content);
-    const sanitizedExcerpt = sanitizeArticleContent(excerpt || content.slice(0, 160) + '...');
+    const cleanExcerpt = extractCleanExcerpt(excerpt, content, 180);
+    const sanitizedExcerpt = sanitizeArticleContent(cleanExcerpt);
 
     const articleData = {
       title: title.trim(),
