@@ -133,12 +133,51 @@ export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
   const article = await fetchArticleData(slug);
   const related = article ? getRelatedArticles(article, 3) : [];
+  const baseUrl = getBaseUrl();
+
+  const jsonLd = article ? {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: article.title,
+    description: extractCleanExcerpt(article.excerpt, article.content, 180),
+    image: [
+      article.thumbnail && !article.thumbnail.startsWith('data:')
+        ? article.thumbnail
+        : `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`
+    ],
+    datePublished: article.publishedAt,
+    dateModified: article.publishedAt,
+    author: [{
+      '@type': 'Person',
+      name: article.author || 'Redaksi LPM Reaksi',
+    }],
+    publisher: {
+      '@type': 'Organization',
+      name: 'LPM Reaksi',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${baseUrl}/images/reaksi logos.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${baseUrl}/${article.rubrik || 'artikel'}/${(article.slug || slug).replace(/-+$/, '')}`,
+    },
+  } : null;
 
   return (
-    <ArticleClient
-      initialArticle={article}
-      initialRelated={related}
-      slug={slug}
-    />
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <ArticleClient
+        initialArticle={article}
+        initialRelated={related}
+        slug={slug}
+      />
+    </>
   );
 }

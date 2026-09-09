@@ -1,8 +1,12 @@
 import { MetadataRoute } from 'next';
+import { query } from '@/backend/db/postgres';
 import { db } from '@/lib/db/repository';
 import { RUBRIKS, getBaseUrl } from '@/lib/data';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // revalidate hourly
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getBaseUrl();
   const now = new Date();
 
@@ -54,9 +58,40 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.85,
   }));
 
-  // 3. Dynamic Article Pages (canonical: /[rubrik]/[slug])
-  const allArticles = db.getArticles() || [];
-  const publishedArticles = allArticles.filter((art) => art.status === 'PUBLISHED');
+  // 3. Dynamic Article Pages (canonical: /[rubrik]/[cleanSlug])
+  let publishedArticles: Array<{ slug: string; rubrik?: string; updatedAt?: string }> = [];
+
+  try {
+    if (process.env.DATABASE_URL) {
+      const res = await query(
+        `SELECT slug, rubrik, COALESCE(updated_at, published_at, created_at) as updated_at 
+         FROM articles 
+         WHERE status = 'PUBLISHED' 
+         ORDER BY COALESCE(published_at, created_at) DESC;`
+      );
+      if (res && res.rows) {
+        publishedArticles = res.rows.map((r: any) => ({
+          slug: (r.slug || '').replace(/-+$/, ''),
+          rubrik: r.rubrik,
+          updatedAt: r.updated_at,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('[Sitemap] PostgreSQL fetch warning, using fallback:', err);
+  }
+
+  // Fallback to local db if PostgreSQL empty or unreachable
+  if (publishedArticles.length === 0) {
+    const local = (db.getArticles() || [])
+      .filter((art) => art.status === 'PUBLISHED')
+      .map((art) => ({
+        slug: (art.slug || '').replace(/-+$/, ''),
+        rubrik: art.rubrik,
+        updatedAt: art.updatedAt,
+      }));
+    publishedArticles = local;
+  }
 
   const articlePages: MetadataRoute.Sitemap = publishedArticles.map((art) => ({
     url: art.rubrik

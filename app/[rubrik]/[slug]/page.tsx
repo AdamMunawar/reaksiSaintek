@@ -130,13 +130,52 @@ export default async function RubrikArticlePage({ params }: Props) {
   const { slug, rubrik } = await params;
   const article = await fetchArticleData(slug, rubrik);
   const related = article ? getRelatedArticles(article, 3) : [];
+  const baseUrl = getBaseUrl();
+
+  const jsonLd = article ? {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: article.title,
+    description: extractCleanExcerpt(article.excerpt, article.content, 180),
+    image: [
+      article.thumbnail && !article.thumbnail.startsWith('data:')
+        ? article.thumbnail
+        : `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`
+    ],
+    datePublished: article.publishedAt,
+    dateModified: article.publishedAt,
+    author: [{
+      '@type': 'Person',
+      name: article.author || 'Redaksi LPM Reaksi',
+    }],
+    publisher: {
+      '@type': 'Organization',
+      name: 'LPM Reaksi',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${baseUrl}/images/reaksi logos.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${baseUrl}/${article.rubrik || rubrik}/${(article.slug || slug).replace(/-+$/, '')}`,
+    },
+  } : null;
 
   return (
-    <ArticleViewCore
-      initialArticle={article}
-      initialRelated={related}
-      slug={slug}
-      rubrikContext={rubrik}
-    />
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <ArticleViewCore
+        initialArticle={article}
+        initialRelated={related}
+        slug={slug}
+        rubrikContext={rubrik}
+      />
+    </>
   );
 }
