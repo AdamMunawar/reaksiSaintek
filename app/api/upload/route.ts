@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getSession } from '@/backend/auth/security';
 
 export const runtime = 'nodejs';
 
@@ -9,9 +10,17 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB max payload
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session || session.role === 'guest') {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak. Silakan login untuk mengunggah media.' },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
-    const author = (formData.get('author') as string) || 'Redaksi';
+    const author = session.name || (formData.get('author') as string) || 'Redaksi';
 
     if (!file) {
       return NextResponse.json(

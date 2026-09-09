@@ -90,12 +90,21 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
+    if (!session || session.role === 'guest') {
+      return NextResponse.json({ error: 'Akses ditolak. Anda harus masuk dengan akun redaksi untuk mengirim artikel.' }, { status: 401 });
+    }
 
     const body = await req.json();
     const { title, slug, rubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags } = body;
 
     if (!title || !content) {
       return NextResponse.json({ error: 'Judul dan konten artikel wajib diisi.' }, { status: 400 });
+    }
+
+    // Only Pemred and Redaktur can directly set status to PUBLISHED
+    let targetStatus = status || 'DRAFT';
+    if (targetStatus === 'PUBLISHED' && session.role !== 'pemred' && session.role !== 'redaktur') {
+      targetStatus = 'PENDING_REVIEW';
     }
 
     // Anti-XSS Content Sanitization
@@ -110,10 +119,10 @@ export async function POST(req: NextRequest) {
       content: sanitizedContent,
       coverImage: coverImage || '',
       coverCaption: coverCaption ? coverCaption.trim() : '',
-      authorId: session?.id || body.authorId || 'user-superadmin',
-      authorName: authorName || session?.name || 'Redaksi LPM Reaksi',
-      authorRole: session?.role || body.authorRole || 'pengurus',
-      status: status || 'DRAFT',
+      authorId: session.id,
+      authorName: authorName ? authorName.trim() : session.name,
+      authorRole: session.role,
+      status: targetStatus,
       tags: tags || [],
     };
 

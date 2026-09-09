@@ -33,7 +33,7 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
           <h4 className="text-base sm:text-[17px] font-bold text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-2">
             {article.title}
           </h4>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-gray-400 dark:text-gray-500" suppressHydrationWarning>
             {article.readTime} menit · {formatDate(article.publishedAt)}
           </p>
         </div>
@@ -93,12 +93,14 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
         {/* Excerpt Ringkasan (Hanya ditampilkan di Card) */}
         {article.excerpt && (
           <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2 font-normal">
-            {article.excerpt}
+            {article.excerpt.endsWith('....') || article.excerpt.endsWith('...') || /[.!?]$/.test(article.excerpt.trim())
+              ? article.excerpt
+              : `${article.excerpt.trim()}....`}
           </p>
         )}
 
         {/* Date & Read time */}
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="text-[11px] text-gray-400 dark:text-gray-500" suppressHydrationWarning>
           {article.readTime} menit · {formatDate(article.publishedAt)}
         </p>
       </div>

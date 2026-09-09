@@ -12,6 +12,30 @@ import { db } from '@/lib/db/repository';
 
 function HeaderAuthAction() {
   const { user, role, isLoggedIn } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Link
+        href="/login"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors hover:opacity-75 flex-shrink-0"
+        style={{
+          border: '1px solid var(--color-line)',
+          color: 'var(--color-foreground)',
+          fontFamily: 'var(--font-display)',
+        }}
+        title="Masuk Meja Redaksi"
+        suppressHydrationWarning
+      >
+        <LogIn size={13} />
+        <span>Login</span>
+      </Link>
+    );
+  }
 
   if (isLoggedIn && user) {
     const isKontributor = role === 'kontributor';
@@ -27,6 +51,7 @@ function HeaderAuthAction() {
           fontFamily: 'var(--font-display)',
         }}
         title={label}
+        suppressHydrationWarning
       >
         <LayoutDashboard size={13} />
         <span>{label}</span>
@@ -44,6 +69,7 @@ function HeaderAuthAction() {
         fontFamily: 'var(--font-display)',
       }}
       title="Masuk Meja Redaksi"
+      suppressHydrationWarning
     >
       <LogIn size={13} />
       <span>Login</span>

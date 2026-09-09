@@ -28,7 +28,7 @@ const defaultSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '') ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
-  'https://reaksisaintek.vercel.app';
+  'https://reaksi-saintek.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultSiteUrl),
@@ -81,7 +81,25 @@ export default function RootLayout({
       suppressHydrationWarning
       data-scroll-behavior="smooth"
     >
-      <body className="min-h-full flex flex-col antialiased">
+      <body className="min-h-full flex flex-col antialiased" suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var toRemove = [];
+                for (var i = 0; i < localStorage.length; i++) {
+                  var k = localStorage.key(i);
+                  if (k && k.indexOf('reaksi_') === 0) {
+                    toRemove.push(k);
+                  }
+                }
+                for (var j = 0; j < toRemove.length; j++) {
+                  localStorage.removeItem(toRemove[j]);
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
         <ConsoleErrorShield />
         <ThemeProvider
           attribute="data-theme"

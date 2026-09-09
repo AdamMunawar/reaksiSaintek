@@ -61,23 +61,6 @@ const FONT_FAMILY_CSS: Record<FontFamily, string> = {
   mono: 'var(--font-mono), ui-monospace, "SF Mono", Menlo, Courier, monospace',
 };
 
-function loadReadingSettings(): { fontSize: number; fontFamily: FontFamily; colWidth: ColWidth } {
-  if (typeof window === 'undefined') return { fontSize: 18, fontFamily: 'serif', colWidth: 'normal' };
-  try {
-    const raw = localStorage.getItem('reaksi_reading_settings');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const fs = Number(parsed.fontSize);
-      return {
-        fontSize: !isNaN(fs) && fs >= 12 && fs <= 36 ? fs : 18,
-        fontFamily: parsed.fontFamily ?? 'serif',
-        colWidth: parsed.colWidth ?? 'normal',
-      };
-    }
-  } catch (_) {}
-  return { fontSize: 18, fontFamily: 'serif', colWidth: 'normal' };
-}
-
 // ─── Props ─────────────────────────────────────────────────────────────────────
 interface ArticleViewCoreProps {
   initialArticle?: Article | null;
@@ -97,12 +80,18 @@ export default function ArticleViewCore({
   const [article, setArticle] = useState<Article | null>(initialArticle);
   const [related, setRelated] = useState<Article[]>(initialRelated);
   const [loading, setLoading] = useState(!initialArticle);
-  const [rubrikMeta, setRubrikMeta] = useState<{ label: string; color: string }>({
-    label: 'Berita',
-    color: '#2563EB',
-  });
 
-  // ── Reading settings (persistent) ─────────────────────────────────────────
+  // Initialize rubrikMeta immediately so SSR matches Client render exactly
+  const initialMeta = (() => {
+    const rKey = initialArticle?.rubrik || rubrikContext;
+    if (rKey && (RUBRIK_META as any)[rKey]) {
+      return (RUBRIK_META as any)[rKey];
+    }
+    return { label: 'Berita', color: '#2563EB' };
+  })();
+  const [rubrikMeta, setRubrikMeta] = useState<{ label: string; color: string }>(initialMeta);
+
+  // ── Reading settings (Session in-memory) ──────────────────────────────────
   const [fontSize, setFontSize] = useState<FontSize>(18);
   const [fontFamily, setFontFamily] = useState<FontFamily>('serif');
   const [colWidth, setColWidth] = useState<ColWidth>('normal');
@@ -118,21 +107,6 @@ export default function ArticleViewCore({
 
   // ── Back to top ─────────────────────────────────────────────────────────────
   const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // ── Load reading settings on mount ────────────────────────────────────────
-  useEffect(() => {
-    const settings = loadReadingSettings();
-    setFontSize(settings.fontSize);
-    setFontFamily(settings.fontFamily);
-    setColWidth(settings.colWidth);
-  }, []);
-
-  // ── Persist reading settings ───────────────────────────────────────────────
-  const saveSettings = useCallback((fs: FontSize, ff: FontFamily, cw: ColWidth) => {
-    try {
-      localStorage.setItem('reaksi_reading_settings', JSON.stringify({ fontSize: fs, fontFamily: ff, colWidth: cw }));
-    } catch (_) {}
-  }, []);
 
   // ── Scroll listener for back-to-top button ─────────────────────────────────
   useEffect(() => {
@@ -202,7 +176,6 @@ export default function ArticleViewCore({
           setArticle(mapped);
           setViewCount(mapped.views);
           setRelated(getRelatedArticles(mapped, 3));
-          db.saveArticle(mapped as any);
 
           const dynRubrik = db.getRubrikBySlug(mapped.rubrik);
           if (dynRubrik) {
@@ -249,7 +222,6 @@ export default function ArticleViewCore({
   const handleFontSizeChange = (newSize: number) => {
     const clamped = Math.max(12, Math.min(32, Math.round(newSize)));
     setFontSize(clamped);
-    saveSettings(clamped, fontFamily, colWidth);
   };
 
   const handleFontSizeStep = (delta: number) => {
@@ -258,12 +230,10 @@ export default function ArticleViewCore({
 
   const handleFontFamily = (ff: FontFamily) => {
     setFontFamily(ff);
-    saveSettings(fontSize, ff, colWidth);
   };
 
   const handleColWidth = (cw: ColWidth) => {
     setColWidth(cw);
-    saveSettings(fontSize, fontFamily, cw);
   };
 
   // ── Render article body HTML ───────────────────────────────────────────────
@@ -347,7 +317,8 @@ export default function ArticleViewCore({
 
   const handleShareWhatsApp = useCallback(() => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${article.title} ${url}`)}`, '_blank', 'noopener,noreferrer');
+    const text = `${article.title}\n\n${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   }, [article.title]);
 
   const handleShareTwitter = useCallback(() => {
@@ -366,13 +337,13 @@ export default function ArticleViewCore({
       <Header />
 
       {/* ── Main Article ── */}
-      <main className={`flex-1 mx-auto px-4 sm:px-8 py-10 sm:py-16 w-full transition-all duration-300 ${COL_WIDTHS[colWidth]}`}>
+      <main className={`flex-1 mx-auto px-4 sm:px-8 py-10 sm:py-16 w-full transition-all duration-300 ${COL_WIDTHS[colWidth]}`} suppressHydrationWarning>
 
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs mb-6" style={{ color: 'var(--color-muted)' }}>
           <Link href="/" className="hover:underline">Beranda</Link>
           <ChevronRight size={12} />
-          <Link href={rubrikUrl} className="hover:underline capitalize" style={{ color: rubrikMeta.color }}>
+          <Link href={rubrikUrl} className="hover:underline capitalize" style={{ color: rubrikMeta.color }} suppressHydrationWarning>
             {rubrikMeta.label}
           </Link>
         </nav>
@@ -381,6 +352,7 @@ export default function ArticleViewCore({
         <span
           className="inline-flex items-center px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white mb-3"
           style={{ backgroundColor: rubrikMeta.color, fontFamily: 'var(--font-display)' }}
+          suppressHydrationWarning
         >
           {rubrikMeta.label}
         </span>
@@ -400,25 +372,27 @@ export default function ArticleViewCore({
         >
           {/* Author + meta */}
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full bg-cover bg-center border flex-shrink-0"
-              style={{ backgroundImage: `url(${article.authorAvatar})`, borderColor: 'var(--color-line)' }}
+            <img
+              src={article.authorAvatar}
+              alt={article.author}
+              className="w-10 h-10 rounded-full object-cover border flex-shrink-0"
+              style={{ borderColor: 'var(--color-line)' }}
             />
             <div>
               <p className="text-xs font-bold" style={{ color: 'var(--color-foreground)', fontFamily: 'var(--font-display)' }}>
                 {article.author}
               </p>
               <p className="text-[11px] flex items-center gap-2 flex-wrap" style={{ color: 'var(--color-muted)' }}>
-                <span>{formatDate(article.publishedAt)}</span>
+                <span suppressHydrationWarning>{formatDate(article.publishedAt)}</span>
                 <span>·</span>
                 <span className="flex items-center gap-1">
                   <Clock size={11} />
                   {article.readTime} menit baca
                 </span>
                 <span>·</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1" suppressHydrationWarning>
                   <Eye size={11} />
-                  {viewCount.toLocaleString('id-ID')} dibaca
+                  <span suppressHydrationWarning>{viewCount.toLocaleString('id-ID')} dibaca</span>
                 </span>
               </p>
             </div>
@@ -503,6 +477,7 @@ export default function ArticleViewCore({
             fontSize: `${fontSize}px`,
             lineHeight: fontSize >= 21 ? '1.9' : '1.75',
           }}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: renderBody(article.content) }}
         />
 
@@ -543,9 +518,9 @@ export default function ArticleViewCore({
             {copied ? <Check size={13} /> : <Link2 size={13} />}
             {copied ? 'Tautan Disalin!' : 'Salin Tautan Artikel'}
           </button>
-          <span className="text-xs flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
+          <span className="text-xs flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }} suppressHydrationWarning>
             <Eye size={13} />
-            <span>{viewCount.toLocaleString('id-ID')} kali dibaca</span>
+            <span suppressHydrationWarning>{viewCount.toLocaleString('id-ID')} kali dibaca</span>
           </span>
         </div>
 
@@ -763,13 +738,12 @@ export default function ArticleViewCore({
 
             {/* Reset Settings */}
             <div className="pt-2 border-t flex justify-between items-center text-[10px]" style={{ borderColor: 'var(--color-line)' }}>
-              <span style={{ color: 'var(--color-muted)' }}>Tersimpan otomatis</span>
+              <span style={{ color: 'var(--color-muted)' }}>Tampilan sesi</span>
               <button
                 onClick={() => {
                   setFontSize(18);
                   setFontFamily('serif');
                   setColWidth('normal');
-                  saveSettings(18, 'serif', 'normal');
                 }}
                 className="font-bold uppercase tracking-wider text-muted hover:text-[var(--color-accent)] transition-colors"
               >

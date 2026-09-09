@@ -6,7 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const vercelDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL 
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` 
     : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || vercelDomain || 'https://reaksisaintek.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || vercelDomain || 'https://reaksi-saintek.vercel.app';
   const now = new Date();
 
   // 1. Static Pages

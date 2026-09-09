@@ -13,17 +13,22 @@ const STORAGE_KEYS = {
   MEDIA_PARTNER: 'reaksi_db_media_partner_v1',
 };
 
-// Clear previous mock articles and old users if any
+// Purge all legacy database records and auth credentials from client localStorage
 if (typeof window !== 'undefined') {
   try {
-    localStorage.removeItem('reaksi_db_articles_v1');
-    localStorage.removeItem('reaksi_db_users_v2');
-    localStorage.removeItem('reaksi_db_staff_v1');
-  } catch (e) {}
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('reaksi_') || k.startsWith('reaksi_db_') || k.startsWith('reaksi_auth_'))) {
+        toRemove.push(k);
+      }
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (_) {}
 }
 
-// In-memory fallback / SSR storage
-let memoryStore = {
+// In-memory fallback / SSR storage (Server-driven data architecture)
+let memoryStore: Record<string, any> = {
   articles: [...SEED_ARTICLES],
   users: [...SEED_USERS],
   pages: [...SEED_PAGES],
@@ -35,30 +40,18 @@ let memoryStore = {
 };
 
 function getLocal<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const item = localStorage.getItem(key);
-    if (!item) {
-      localStorage.setItem(key, JSON.stringify(fallback));
-      return fallback;
-    }
-    return JSON.parse(item);
-  } catch (err) {
-    console.warn(`Error reading ${key} from localStorage:`, err);
-    return fallback;
+  // Pure in-memory fallback — never read or dump database records in client localStorage
+  const storeKey = key.replace('reaksi_db_', '').replace(/_v\d+$/, '');
+  if (storeKey in memoryStore) {
+    return memoryStore[storeKey] as T;
   }
+  return fallback;
 }
 
 function setLocal<T>(key: string, value: T): void {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      // Dispatch storage event for multi-tab sync
-      window.dispatchEvent(new Event('storage'));
-    } catch (err) {
-      console.warn(`Error saving ${key} to localStorage:`, err);
-    }
-  }
+  // Pure in-memory update — never expose database records to client inspect
+  const storeKey = key.replace('reaksi_db_', '').replace(/_v\d+$/, '');
+  memoryStore[storeKey] = value;
 }
 
 function sanitizeArticle(art: Article): Article {

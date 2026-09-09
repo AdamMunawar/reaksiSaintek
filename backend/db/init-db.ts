@@ -159,7 +159,8 @@ export async function initPostgresDatabase() {
   `);
 
   // 10. Seed Initial Official Superadmin (Cleaned from old mock accounts)
-  const defaultPasswordHash = await bcrypt.hash('reaksi2026', 10);
+  const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'reaksi2026';
+  const defaultPasswordHash = await bcrypt.hash(defaultPassword, 10);
 
   // Clean old mock user accounts from database
   await query(`DELETE FROM users WHERE id IN ('user-pemred', 'user-redaktur', 'user-pengurus', 'user-kontributor');`).catch(() => {});

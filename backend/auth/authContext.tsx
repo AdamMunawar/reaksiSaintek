@@ -30,43 +30,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // 1. First check server HttpOnly cookie session via /api/auth/me
+    // Purge exposed localStorage auth keys for privacy and security
+    if (typeof window !== 'undefined') {
+      try {
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('reaksi_')) {
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (_) {}
+    }
+
+    // Authenticate securely via server HttpOnly session cookie
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.authenticated && data.user) {
           setUser(data.user);
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
           return;
         }
-
-        // Fallback to local storage only if valid user was previously saved
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            if (parsed && parsed.email) {
-              if (parsed.role === 'admin') parsed.role = 'redaktur';
-              if (parsed.role === 'reporter') parsed.role = 'pengurus';
-              setUser(parsed);
-              return;
-            }
-          } catch (e) {}
-        }
-        // Do NOT auto-login as superadmin! Guests stay unauthenticated.
         setUser(null);
       })
       .catch(() => {
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            if (parsed && parsed.email) {
-              setUser(parsed);
-              return;
-            }
-          } catch (e) {}
-        }
         setUser(null);
       });
   }, []);
@@ -82,7 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (res.ok && data.success && data.user) {
         setUser(data.user);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
         return { success: true };
       }
 
@@ -90,17 +77,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error };
       }
     } catch (e) {
-      console.error('Login network error:', e);
+      console.error('[500] Login network exception');
     }
 
     // Local fallback for offline/test environments
     const found = db.getUserByEmail(email.trim());
     if (found) {
-      if (found.password && password && found.password !== password && password !== 'reaksi2026') {
+      if (found.password && password && found.password !== password) {
         return { success: false, error: 'Kata sandi tidak sesuai.' };
       }
       setUser(found);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(found));
       return { success: true };
     }
 
@@ -131,21 +117,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       setUser(guestUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(guestUser));
       return;
     }
 
     const found = db.getUsers().find((u) => u.role === normalizedRole) || db.getUserById('user-superadmin');
     if (found) {
       setUser(found);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(found));
     }
   };
 
   const logout = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => { });
     setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    try {
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('reaksi_')) toRemove.push(k);
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (_) {}
   };
 
   // Determine current role (with fallback & normalization)

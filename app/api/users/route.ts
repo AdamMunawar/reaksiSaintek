@@ -6,6 +6,11 @@ import { getSession } from '@/backend/auth/security';
 
 export async function GET() {
   try {
+    const session = await getSession();
+    if (!session || (session.role !== 'superadmin' && session.role !== 'pemred' && session.role !== 'redaktur')) {
+      return NextResponse.json({ error: 'Akses ditolak. Silakan masuk dengan akun redaksi.' }, { status: 401 });
+    }
+
     // 1. Try PostgreSQL
     try {
       const res = await query('SELECT id, name, email, role, institution, phone, bio, created_at FROM users ORDER BY created_at ASC;');
@@ -14,8 +19,19 @@ export async function GET() {
       }
     } catch (e) {}
 
-    // 2. Fallback to repository
-    return NextResponse.json(db.getUsers());
+    // 2. Fallback to repository (sanitized without any credentials)
+    const sanitized = db.getUsers().map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      avatar: u.avatar,
+      institution: u.institution,
+      phone: u.phone,
+      bio: u.bio,
+      created_at: u.createdAt,
+    }));
+    return NextResponse.json(sanitized);
   } catch (error: any) {
     return NextResponse.json({ error: 'Gagal mengambil data pengguna.' }, { status: 500 });
   }
@@ -64,7 +80,8 @@ export async function POST(req: NextRequest) {
         }
       } else {
         const newId = `user-${Date.now()}`;
-        const hashToUse = passwordHash || (await bcrypt.hash('reaksi2026', 10));
+        const defaultPwd = process.env.ADMIN_DEFAULT_PASSWORD || 'reaksi2026';
+        const hashToUse = passwordHash || (await bcrypt.hash(defaultPwd, 10));
         await query(
           `INSERT INTO users (id, name, email, password_hash, role, institution, phone, bio) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`,
           [newId, name.trim(), email.toLowerCase().trim(), hashToUse, role, institution || null, phone || null, bio || null]
@@ -87,7 +104,9 @@ export async function POST(req: NextRequest) {
       bio,
     });
 
-    return NextResponse.json({ success: true, user: saved });
+    // Strip sensitive password and hash fields from response
+    const { password: _p, passwordHash: _ph, ...cleanUser } = saved as any;
+    return NextResponse.json({ success: true, user: cleanUser });
   } catch (error: any) {
     return NextResponse.json({ error: 'Gagal menyimpan data pengguna.' }, { status: 500 });
   }

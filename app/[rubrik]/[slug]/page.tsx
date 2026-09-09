@@ -2,6 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { query } from '@/backend/db/postgres';
 import { getArticleBySlug, getRelatedArticles, Article } from '@/lib/data';
+import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 // Use absolute alias to avoid TypeScript resolver issues with [bracket] directories
 import ArticleViewCore from '@/components/article/ArticleViewCore';
 
@@ -13,7 +14,7 @@ function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'https://reaksisaintek.vercel.app';
+  return 'https://reaksi-saintek.vercel.app';
 }
 
 const fetchArticleData = cache(async (slug: string, rubrik: string) => {
@@ -66,11 +67,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = article.title;
-  const description = (article.excerpt || 'Baca artikel dan liputan mendalam selengkapnya di LPM Reaksi.')
-    .replace(/<[^>]+>/g, '').trim().slice(0, 160);
+  const description = extractCleanExcerpt(article.excerpt, article.content, 155) || 'Baca liputan mendalam selengkapnya di Portal Berita LPM Reaksi.';
 
-  let imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
-  if (!article.thumbnail) imageUrl = `${baseUrl}/images/reaksi.png`;
+  // Ensure absolute image URL for WhatsApp / Telegram / Twitter crawler
+  let imageUrl = `${baseUrl}/images/reaksi.png`;
+  if (article.thumbnail) {
+    if (article.thumbnail.startsWith('http://') || article.thumbnail.startsWith('https://')) {
+      imageUrl = article.thumbnail;
+    } else if (article.thumbnail.startsWith('/')) {
+      imageUrl = `${baseUrl}${article.thumbnail}`;
+    } else {
+      imageUrl = `${baseUrl}/${article.thumbnail}`;
+    }
+  }
 
   // Canonical URL uses rubrik-based path
   const articleUrl = `${baseUrl}/${article.rubrik || rubrik}/${article.slug || slug}`;
@@ -92,7 +101,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'article',
       publishedTime: article.publishedAt,
       authors: [article.author],
-      images: [{ url: imageUrl, secureUrl: imageUrl, width: 1200, height: 630, alt: title }],
+      images: [
+        {
+          url: imageUrl,
+          secureUrl: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',

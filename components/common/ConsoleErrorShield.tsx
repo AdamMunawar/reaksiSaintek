@@ -12,6 +12,18 @@ export default function ConsoleErrorShield() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Purge exposed database and user credentials from client localStorage
+    try {
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('reaksi_') || k.startsWith('reaksi_db_') || k.startsWith('reaksi_auth_'))) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (_) {}
+
     const originalError = console.error;
     const originalWarn = console.warn;
 
@@ -93,12 +105,28 @@ export default function ConsoleErrorShield() {
       }
     };
 
+    const handleError = (event: ErrorEvent) => {
+      const msg = String(event?.message || '');
+      if (
+        msg.includes('hydration') ||
+        msg.includes('hydrated') ||
+        msg.includes('server rendered HTML') ||
+        msg.includes("didn't match")
+      ) {
+        event.stopImmediatePropagation?.();
+        event.preventDefault?.();
+        return true;
+      }
+    };
+
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError, true);
 
     return () => {
       console.error = originalError;
       console.warn = originalWarn;
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError, true);
     };
   }, []);
 

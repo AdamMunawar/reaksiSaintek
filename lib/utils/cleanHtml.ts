@@ -77,6 +77,8 @@ export function extractCleanExcerpt(text?: string, fallbackContent?: string, max
 
   if (!source) return '';
 
+  let isTruncatedFromLonger = Boolean(fallbackContent && fallbackContent.length > source.length + 30);
+
   // Extract first meaningful text paragraph from HTML
   if (source.includes('<p') || source.includes('<div')) {
     const paragraphs = source.match(/<(p|div)[^>]*>([\s\S]*?)<\/\1>/gi);
@@ -85,6 +87,7 @@ export function extractCleanExcerpt(text?: string, fallbackContent?: string, max
         const cleanP = p.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').trim();
         if (cleanP.length > 10) {
           source = cleanP;
+          isTruncatedFromLonger = true;
           break;
         }
       }
@@ -94,6 +97,7 @@ export function extractCleanExcerpt(text?: string, fallbackContent?: string, max
     const chunks = source.split(/\n\s*\n/).map((c) => c.trim()).filter((c) => c.length > 10);
     if (chunks.length > 0) {
       source = chunks[0];
+      isTruncatedFromLonger = true;
     }
   }
 
@@ -114,6 +118,22 @@ export function extractCleanExcerpt(text?: string, fallbackContent?: string, max
     .trim();
 
   if (!stripped) return '';
-  if (stripped.length <= maxLen) return stripped;
-  return stripped.slice(0, maxLen).trim() + '...';
+
+  if (stripped.length > maxLen) {
+    let truncated = stripped.slice(0, maxLen);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxLen * 0.55) {
+      truncated = truncated.slice(0, lastSpace);
+    }
+    // Remove dangling punctuation and ensure it ends with "...." as requested
+    truncated = truncated.replace(/[,;:\-\s]+$/, '');
+    return truncated.replace(/\.*$/, '') + '....';
+  }
+
+  // If the excerpt is from a larger article and doesn't finish with a period, avoid hanging
+  if (isTruncatedFromLonger && !/[.!?]$/.test(stripped)) {
+    return stripped.replace(/[,;:\-\s]+$/, '') + '....';
+  }
+
+  return stripped;
 }

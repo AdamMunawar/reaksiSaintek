@@ -67,9 +67,21 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // Protect sensitive administrative API routes
+  if (pathname.startsWith('/api/users') || pathname.startsWith('/api/upload')) {
+    const sessionCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: 'Akses ditolak. Sesi login diperlukan.' }, { status: 401 });
+    }
+    const parts = sessionCookie.split('.');
+    if (parts.length !== 3) {
+      return NextResponse.json({ error: 'Sesi login tidak valid.' }, { status: 401 });
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/users/:path*', '/api/upload/:path*'],
 };

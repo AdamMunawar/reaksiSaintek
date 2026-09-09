@@ -52,10 +52,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await getSession();
+
+  if (!session || session.role === 'guest') {
+    return NextResponse.json({ error: 'Akses ditolak. Silakan login untuk memperbarui artikel.' }, { status: 401 });
+  }
+
+  // Superadmin is read-only for article editorial content
+  if (session.role === 'superadmin') {
+    return NextResponse.json({ error: 'SOP Redaksi: Akun Superadmin bersifat read-only untuk naskah editorial.' }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
     const { title, slug, rubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags, reviewNotes } = body;
+
+    // Only Pemred and Redaktur can publish or update status to PUBLISHED
+    let targetStatus = status;
+    if (targetStatus === 'PUBLISHED' && session.role !== 'pemred' && session.role !== 'redaktur') {
+      targetStatus = undefined; // Retain current or leave to review
+    }
 
     const sanitizedContent = content ? sanitizeArticleContent(content) : undefined;
     const sanitizedExcerpt = excerpt ? sanitizeArticleContent(excerpt) : undefined;
@@ -154,6 +170,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await getSession();
+
+  if (!session || (session.role !== 'pemred' && session.role !== 'redaktur' && session.role !== 'superadmin')) {
+    return NextResponse.json({ error: 'Akses ditolak. Hanya Pemred, Redaktur, atau Superadmin yang berhak menghapus artikel.' }, { status: 403 });
+  }
 
   try {
     if (process.env.DATABASE_URL) {

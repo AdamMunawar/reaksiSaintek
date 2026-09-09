@@ -154,6 +154,7 @@ export function formatDate(dateStr?: string): string {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+      timeZone: 'Asia/Jakarta',
     }).format(new Date(dateStr));
   } catch {
     return dateStr;
