@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
           params.push(rubrikParam);
         }
         if (searchParam) {
-          sql += ` AND (LOWER(title) LIKE $${pIdx} OR LOWER(excerpt) LIKE $${pIdx} OR LOWER(author_name) LIKE $${pIdx})`;
+          sql += ` AND (LOWER(title) LIKE $${pIdx} OR LOWER(excerpt) LIKE $${pIdx} OR LOWER(content) LIKE $${pIdx} OR LOWER(author_name) LIKE $${pIdx})`;
           params.push(`%${searchParam.toLowerCase()}%`);
           pIdx++;
         }
