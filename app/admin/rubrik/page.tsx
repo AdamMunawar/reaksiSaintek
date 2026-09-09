@@ -170,7 +170,7 @@ export default function AdminRubrikPage() {
             Kelola Rubrik &amp; Kategori
           </h1>
           <p className="text-xs mt-1" style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>
-            Atur rubrik portal berita secara dinamis â€” tambah rubrik baru, ubah warna, emoji, urutan, atau hapus rubrik.
+            Atur rubrik portal berita secara dinamis — tambah rubrik baru, ubah warna, urutan, atau hapus rubrik.
           </p>
         </div>
 

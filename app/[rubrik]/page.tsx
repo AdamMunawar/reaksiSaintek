@@ -52,7 +52,7 @@ export default function RubrikPage() {
         label: rubrikSlug.replace(/-/g, ' ').toUpperCase(),
         description: 'Arsip artikel dan liputan terkini',
         color: '#2563EB',
-        emoji: '📰',
+        emoji: '',
       });
     }
 
