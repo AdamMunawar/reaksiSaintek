@@ -1,38 +1,50 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 export default function NavigationProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
 
-  // Complete progress on route change
+  const clearAllTimers = () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  };
+
+  // Complete progress bar whenever route changes
   useEffect(() => {
-    if (isLoading) {
+    clearAllTimers();
+
+    if (visible) {
       setProgress(100);
-      const timer = setTimeout(() => {
-        setIsLoading(false);
+      const dismissTimer = setTimeout(() => {
+        setVisible(false);
         setProgress(0);
-      }, 250);
-      return () => clearTimeout(timer);
+      }, 200);
+      timersRef.current.push(dismissTimer);
+    } else {
+      setProgress(0);
+      setVisible(false);
     }
+
+    return () => clearAllTimers();
   }, [pathname, searchParams]);
 
-  // Intercept click on internal links
+  // Intercept clicks on internal links to start progress
   useEffect(() => {
     const handleAnchorClick = (e: MouseEvent) => {
-      // Find closest anchor tag
       const target = (e.target as HTMLElement)?.closest('a');
       if (!target) return;
 
       const href = target.getAttribute('href');
       const targetAttr = target.getAttribute('target');
 
-      // Ignore external, empty, hash, download, or modifier key clicks
+      // Ignore external, anchor hash, download, or modifier key clicks
       if (
         !href ||
         href.startsWith('#') ||
@@ -55,90 +67,63 @@ export default function NavigationProgress() {
 
       if (!isInternal) return;
 
-      // Don't trigger if it's current URL
+      // Don't trigger if already on current URL
       const currentUrl = window.location.pathname + window.location.search;
       if (href === currentUrl || href === window.location.pathname) return;
 
-      // Start progress
-      setIsLoading(true);
+      // Clear any pending timers
+      clearAllTimers();
+
+      // Start progress animation
+      setVisible(true);
       setProgress(25);
 
-      // Trickle animation
-      const t1 = setTimeout(() => setProgress(65), 180);
-      const t2 = setTimeout(() => setProgress(85), 450);
+      const t1 = setTimeout(() => setProgress(60), 150);
+      const t2 = setTimeout(() => setProgress(85), 400);
+      // Hard safety timeout: auto-dismiss after 2.5s if route does not complete
+      const tSafety = setTimeout(() => {
+        setProgress(100);
+        setTimeout(() => {
+          setVisible(false);
+          setProgress(0);
+        }, 200);
+      }, 2500);
 
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
+      timersRef.current.push(t1, t2, tSafety);
     };
 
     document.addEventListener('click', handleAnchorClick, { capture: true });
     return () => {
       document.removeEventListener('click', handleAnchorClick, { capture: true });
+      clearAllTimers();
     };
   }, []);
 
-  if (!isLoading && progress === 0) return null;
+  if (!visible && progress === 0) return null;
 
   return (
     <div
       className="pointer-events-none fixed top-0 left-0 right-0 z-[999999]"
       aria-hidden="true"
     >
-      {/* Glow Top Progress Bar */}
+      {/* Sleek Top Glow Progress Bar */}
       <div
-        className="h-[3px] transition-all duration-300 ease-out"
+        className="h-[2.5px] transition-all duration-200 ease-out"
         style={{
           width: `${progress}%`,
-          background: 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #60a5fa 100%)',
-          boxShadow: '0 0 12px rgba(37, 99, 235, 0.8), 0 0 4px rgba(96, 165, 250, 0.9)',
-          opacity: progress === 100 ? 0.6 : 1,
+          background: 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #60a5fa 100%)',
+          boxShadow: '0 0 10px rgba(37, 99, 235, 0.8), 0 0 3px rgba(96, 165, 250, 0.9)',
+          opacity: progress === 100 ? 0.3 : 1,
         }}
       >
-        {/* Glow point at leading edge */}
+        {/* Glow head point */}
         <div
-          className="absolute right-0 top-0 h-[3px] w-24 -translate-y-0.5"
+          className="absolute right-0 top-0 h-[2.5px] w-20"
           style={{
             background: 'radial-gradient(ellipse at right, rgba(96, 165, 250, 1) 0%, transparent 80%)',
             filter: 'blur(1px)',
           }}
         />
-      </div>
-
-      {/* Subtle Top-Right Floating Spinner */}
-      <div
-        className={`fixed top-3.5 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wider uppercase backdrop-blur-md shadow-lg border transition-opacity duration-200 ${
-          progress > 0 && progress < 100 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.92)',
-          borderColor: 'var(--color-line)',
-          color: 'var(--color-accent)',
-          fontFamily: 'var(--font-display)',
-        }}
-      >
-        <svg
-          className="animate-spin h-3.5 w-3.5"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
-        <span>Memuat...</span>
       </div>
     </div>
   );
