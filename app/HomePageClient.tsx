@@ -147,66 +147,6 @@ function HorizCard({ article }: { article: any }) {
   );
 }
 
-function EditorialSkeleton({ message }: { message: string }) {
-  return (
-    <div className="py-8 space-y-8 animate-pulse">
-      {/* Live Logging Status Card */}
-      <div
-        className="p-4 sm:p-5 rounded-md flex items-center justify-between gap-4 border"
-        style={{
-          background: 'var(--color-surface)',
-          borderColor: 'var(--color-line)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
-          </span>
-          <div>
-            <p className="text-xs sm:text-sm font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}>
-              {message}
-            </p>
-            <p className="text-[11px]" style={{ color: 'var(--color-muted)' }}>
-              Menghubungkan ke database LPM Reaksi...
-            </p>
-          </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold">
-          <span className="animate-spin inline-block">⏳</span> Memuat data berita...
-        </div>
-      </div>
-
-      {/* Hero Skeleton Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-4">
-          <div className="w-full aspect-[16/9] rounded-lg bg-gray-200 dark:bg-slate-800" />
-          <div className="w-24 h-4 rounded bg-blue-200 dark:bg-blue-900/50" />
-          <div className="w-3/4 h-7 rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="space-y-2">
-            <div className="w-full h-3.5 rounded bg-gray-100 dark:bg-slate-800/60" />
-            <div className="w-5/6 h-3.5 rounded bg-gray-100 dark:bg-slate-800/60" />
-          </div>
-        </div>
-
-        <div className="lg:col-span-4 space-y-6">
-          <div className="w-36 h-5 rounded bg-gray-200 dark:bg-slate-800 mb-4" />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex gap-3 pb-4 border-b" style={{ borderColor: 'var(--color-line)' }}>
-              <div className="w-20 h-16 rounded bg-gray-200 dark:bg-slate-800 flex-shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="w-16 h-3 rounded bg-blue-100 dark:bg-blue-950" />
-                <div className="w-full h-4 rounded bg-gray-200 dark:bg-slate-800" />
-                <div className="w-2/3 h-3 rounded bg-gray-100 dark:bg-slate-800/60" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─────────────────────────────────────────────────────────────────────────────
    HOMEPAGE CLIENT COMPONENT
    ───────────────────────────────────────────────────────────────────────────── */
@@ -218,10 +158,16 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
   const [allArticles, setAllArticles] = useState<Article[]>(initialArticles);
   const [rubriks, setRubriks] = useState<RubrikItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(initialArticles.length > 0);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>(
-    initialArticles.length > 0 ? 'idle' : 'fetching'
-  );
-  const [syncMessage, setSyncMessage] = useState('Mengambil data berita terkini ...');
+  const [topProgressActive, setTopProgressActive] = useState(initialArticles.length === 0);
+
+  useEffect(() => {
+    // Maksimal 0.5 detik (500ms) untuk loading awal garis gradasi
+    const maxTimer = setTimeout(() => {
+      setTopProgressActive(false);
+      setIsLoaded(true);
+    }, 500);
+    return () => clearTimeout(maxTimer);
+  }, []);
 
   useEffect(() => {
     // If initial articles were provided by SSR, sync them to local cache
@@ -245,22 +191,12 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
         if (Array.isArray(data) && data.length > 0) {
           db.syncArticlesFromRemote(data);
           setAllArticles(getAllActiveArticles());
-          setSyncStatus('success');
-          setSyncMessage(`Sinkronisasi selesai: ${data.length} berita berhasil dimuat.`);
-        } else {
-          setSyncStatus('idle');
         }
         setIsLoaded(true);
-        setTimeout(() => {
-          setSyncStatus('idle');
-        }, 3000);
       })
       .catch((err) => {
         console.warn('Fetch live homepage articles error:', err);
-        setSyncStatus('error');
-        setSyncMessage('Menggunakan data cadangan lokal.');
         setIsLoaded(true);
-        setTimeout(() => setSyncStatus('idle'), 3000);
       });
 
     const sync = () => {
@@ -294,6 +230,17 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
       className="min-h-screen flex flex-col font-sans transition-colors"
       style={{ background: 'var(--color-wall)', color: 'var(--color-foreground)' }}
     >
+      {/* ── TOP GRADIENT PROGRESS BAR (MAX 0.5 DETIK) ── */}
+      {topProgressActive && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[999999] h-[2.5px] pointer-events-none"
+          style={{
+            background: 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #60a5fa 100%)',
+            boxShadow: '0 0 10px rgba(37, 99, 235, 0.8), 0 0 3px rgba(96, 165, 250, 0.9)',
+          }}
+        />
+      )}
+
       <PageTitle />
       <Header />
 
@@ -344,8 +291,7 @@ export default function HomePageClient({ initialArticles = [] }: HomePageClientP
 
       <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         {allArticles.length === 0 && !isLoaded ? (
-          /* ── LOADING SKELETON WHILE INITIAL FETCH ── */
-          <EditorialSkeleton message={syncMessage} />
+          null
         ) : allArticles.length === 0 ? (
           /* ── FRESH EMPTY STATE: ONLY SHOWN IF DB IS TRULY EMPTY ── */
           <section className="py-12 sm:py-16">

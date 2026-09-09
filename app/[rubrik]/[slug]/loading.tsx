@@ -8,6 +8,15 @@ export default function ArticleLoading() {
       className="min-h-screen flex flex-col font-sans transition-colors animate-pulse"
       style={{ background: 'var(--color-wall)', color: 'var(--color-foreground)' }}
     >
+      {/* ── TOP GRADIENT PROGRESS BAR ── */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[999999] h-[2.5px] pointer-events-none"
+        style={{
+          background: 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #60a5fa 100%)',
+          boxShadow: '0 0 10px rgba(37, 99, 235, 0.8), 0 0 3px rgba(96, 165, 250, 0.9)',
+        }}
+      />
+
       <Header />
 
       {/* Top Reading Tracker Skeleton */}

@@ -8,31 +8,18 @@ export default function GlobalLoading() {
       className="min-h-screen flex flex-col font-sans transition-colors"
       style={{ background: 'var(--color-wall)', color: 'var(--color-foreground)' }}
     >
+      {/* ── TOP GRADIENT PROGRESS BAR ── */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[999999] h-[2.5px] pointer-events-none"
+        style={{
+          background: 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #60a5fa 100%)',
+          boxShadow: '0 0 10px rgba(37, 99, 235, 0.8), 0 0 3px rgba(96, 165, 250, 0.9)',
+        }}
+      />
+
       <Header />
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full animate-pulse">
-        {/* Top Loading Indicator Status */}
-        <div
-          className="p-4 rounded-md flex items-center justify-between gap-4 border mb-8"
-          style={{
-            background: 'var(--color-surface)',
-            borderColor: 'var(--color-line)',
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-600"></span>
-            </span>
-            <p className="text-xs sm:text-sm font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}>
-              Memuat Halaman LPM Reaksi...
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold">
-            <span className="animate-spin inline-block">⏳</span> Menyiapkan konten...
-          </div>
-        </div>
-
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full animate-pulse">
         {/* Hero Grid Skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-4">
