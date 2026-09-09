@@ -1,12 +1,9 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db/repository';
-import { RUBRIKS } from '@/lib/data';
+import { RUBRIKS, getBaseUrl } from '@/lib/data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const vercelDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL 
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` 
-    : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || vercelDomain || 'https://reaksi-saintek.vercel.app';
+  const baseUrl = getBaseUrl();
   const now = new Date();
 
   // 1. Static Pages

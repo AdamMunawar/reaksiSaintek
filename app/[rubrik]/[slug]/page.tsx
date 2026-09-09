@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import { query } from '@/backend/db/postgres';
-import { getArticleBySlug, getRelatedArticles, Article } from '@/lib/data';
+import { getArticleBySlug, getRelatedArticles, getBaseUrl, Article } from '@/lib/data';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 // Use absolute alias to avoid TypeScript resolver issues with [bracket] directories
 import ArticleViewCore from '@/components/article/ArticleViewCore';
@@ -10,21 +10,18 @@ interface Props {
   params: Promise<{ rubrik: string; slug: string }>;
 }
 
-function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'https://reaksi-saintek.vercel.app';
-}
-
 const fetchArticleData = cache(async (slug: string, rubrik: string) => {
   const decodedSlug = decodeURIComponent(slug);
+  const trimmedSlug = decodedSlug.replace(/-+$/, '');
+  const slugWithHyphen = `${trimmedSlug}-`;
 
   try {
     if (process.env.DATABASE_URL) {
       const res = await query(
-        'SELECT * FROM articles WHERE (slug = $1 OR id = $1 OR slug = $2) AND status = $3 LIMIT 1;',
-        [slug, decodedSlug, 'PUBLISHED']
+        `SELECT * FROM articles 
+         WHERE (slug = $1 OR id = $1 OR slug = $2 OR slug = $3 OR slug = $4) 
+         AND status = $5 LIMIT 1;`,
+        [slug, decodedSlug, trimmedSlug, slugWithHyphen, 'PUBLISHED']
       );
       if (res && res.rows.length > 0) {
         const r = res.rows[0];
@@ -50,7 +47,11 @@ const fetchArticleData = cache(async (slug: string, rubrik: string) => {
     console.info('[404] Resource fallback');
   }
 
-  const found = getArticleBySlug(decodedSlug) || getArticleBySlug(slug);
+  const found =
+    getArticleBySlug(decodedSlug) ||
+    getArticleBySlug(trimmedSlug) ||
+    getArticleBySlug(slugWithHyphen) ||
+    getArticleBySlug(slug);
   return found || null;
 });
 

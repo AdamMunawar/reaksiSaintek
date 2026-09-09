@@ -3,6 +3,7 @@ import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/backend/db/postgres';
 import { db } from '@/backend/db/repository';
+import { getBaseUrl } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,11 +48,7 @@ export async function GET(
     }
   }
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '') ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
-    'https://reaksi-saintek.vercel.app';
+  const siteUrl = getBaseUrl();
 
   const defaultLogoResponse = () => {
     try {

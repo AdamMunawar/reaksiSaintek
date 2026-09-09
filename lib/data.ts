@@ -1,6 +1,31 @@
 import { db } from './db/repository';
 import { extractCleanExcerpt } from './utils/cleanHtml';
 
+export function getBaseUrl(): string {
+  let url = (process.env.NEXT_PUBLIC_SITE_URL || '').trim();
+
+  // Guard against missing hyphen in Vercel environment variable
+  if (url.includes('reaksisaintek.vercel.app')) {
+    url = url.replace('reaksisaintek.vercel.app', 'reaksi-saintek.vercel.app');
+  }
+
+  if (url && !url.includes('localhost')) {
+    return url.replace(/\/+$/, '');
+  }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    let vProd = process.env.VERCEL_PROJECT_PRODUCTION_URL.replace('reaksisaintek', 'reaksi-saintek');
+    return `https://${vProd.replace(/\/+$/, '')}`;
+  }
+
+  if (process.env.VERCEL_URL) {
+    let vUrl = process.env.VERCEL_URL.replace('reaksisaintek', 'reaksi-saintek');
+    return `https://${vUrl.replace(/\/+$/, '')}`;
+  }
+
+  return 'https://reaksi-saintek.vercel.app';
+}
+
 export type Rubrik =
   | 'kabar-kampus'
   | 'saintek'
