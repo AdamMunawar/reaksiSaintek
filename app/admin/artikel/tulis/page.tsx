@@ -23,6 +23,7 @@ import {
   Eye
 } from 'lucide-react';
 import ArticlePreviewModal from '@/components/ui/ArticlePreviewModal';
+import { RedakturPublishAlertModal } from '@/components/editorial/RedakturPublishAlertModal';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 
 export default function WriteArticlePage() {
@@ -43,6 +44,7 @@ export default function WriteArticlePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveActionType, setSaveActionType] = useState<'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isRedakturAlertOpen, setIsRedakturAlertOpen] = useState(false);
 
   useEffect(() => {
     const list = db.getRubriks();
@@ -171,6 +173,10 @@ export default function WriteArticlePage() {
         message: 'Peringatan: Foto sampul (cover) wajib diunggah sebelum artikel dapat diterbitkan!',
       });
       document.getElementById('cover-image-section')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    if (role === 'redaktur') {
+      setIsRedakturAlertOpen(true);
       return;
     }
     // Buka modal pratinjau sebelum publish!
@@ -568,8 +574,13 @@ export default function WriteArticlePage() {
         canPublish={canPublish}
         isPublishing={isSaving && saveActionType === 'PUBLISHED'}
         onConfirmPublish={() => {
-          setIsPreviewOpen(false);
-          handleSave('PUBLISHED');
+          if (role === 'redaktur') {
+            setIsPreviewOpen(false);
+            setIsRedakturAlertOpen(true);
+          } else {
+            setIsPreviewOpen(false);
+            handleSave('PUBLISHED');
+          }
         }}
         article={{
           title,
@@ -582,6 +593,21 @@ export default function WriteArticlePage() {
           authorRole: (user?.role as any) || 'superadmin',
           tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
         }}
+      />
+
+      {/* Alert SOP Redaksi Khusus Redaktur */}
+      <RedakturPublishAlertModal
+        isOpen={isRedakturAlertOpen}
+        onClose={() => setIsRedakturAlertOpen(false)}
+        onSubmitToEditorial={() => {
+          setIsRedakturAlertOpen(false);
+          handleSave('PENDING_REVIEW');
+        }}
+        onProceedDirectPublish={() => {
+          setIsRedakturAlertOpen(false);
+          handleSave('PUBLISHED');
+        }}
+        isProcessing={isSaving}
       />
     </div>
   );

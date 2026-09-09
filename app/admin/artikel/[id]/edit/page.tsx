@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import ArticlePreviewModal from '@/components/ui/ArticlePreviewModal';
+import { RedakturPublishAlertModal } from '@/components/editorial/RedakturPublishAlertModal';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 
@@ -37,7 +38,7 @@ export default function EditArticlePage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const { user, canPublish, canEditArticle, canDeleteArticle, isReadOnlyArticles } = useAuth();
+  const { user, canPublish, canEditArticle, canDeleteArticle, role } = useAuth();
 
   const [article, setArticle] = useState<Article | null>(null);
   const [title, setTitle] = useState('');
@@ -56,6 +57,7 @@ export default function EditArticlePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveActionType, setSaveActionType] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isRedakturAlertOpen, setIsRedakturAlertOpen] = useState(false);
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -191,8 +193,8 @@ export default function EditArticlePage() {
   };
 
   const handleInitiatePublish = () => {
-    if (!canEditArticle || isReadOnlyArticles) {
-      setNotification({ type: 'error', message: 'Superadmin tidak memiliki akses untuk mengedit artikel.' });
+    if (!canEditArticle) {
+      setNotification({ type: 'error', message: 'Anda tidak memiliki hak akses untuk mengedit artikel ini.' });
       return;
     }
     if (!title.trim() || !content.trim()) {
@@ -207,11 +209,15 @@ export default function EditArticlePage() {
       document.getElementById('cover-image-section')?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
+    if (role === 'redaktur') {
+      setIsRedakturAlertOpen(true);
+      return;
+    }
     setIsPreviewOpen(true);
   };
 
   const handleDeleteConfirm = () => {
-    if (!canDeleteArticle || isReadOnlyArticles) return;
+    if (!canDeleteArticle) return;
     db.deleteArticle(id);
     router.push('/admin/artikel');
   };
@@ -221,15 +227,6 @@ export default function EditArticlePage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <PageTitle title="Edit Artikel" />
-      {/* Superadmin Read-Only Alert */}
-      {isReadOnlyArticles && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs font-medium flex items-center gap-2.5">
-          <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
-          <span>
-            <strong>Mode Baca Saja (Superadmin):</strong> Anda dapat melihat detail naskah terbit ini, namun tidak memiliki hak akses untuk mengedit atau menghapusnya.
-          </span>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -272,13 +269,12 @@ export default function EditArticlePage() {
             className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight"
             style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
           >
-            {isReadOnlyArticles ? 'Pratinjau Artikel' : 'Edit Artikel'}
+            Edit Artikel
           </h1>
         </div>
 
         {/* Action Buttons */}
-        {!isReadOnlyArticles ? (
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
             {/* Pratinjau Button */}
             <button
               type="button"
@@ -346,20 +342,6 @@ export default function EditArticlePage() {
               </button>
             )}
           </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleOpenPreview}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold uppercase tracking-wider border hover:opacity-80 transition-opacity"
-              style={{ borderColor: 'var(--color-line)', fontFamily: 'var(--font-display)', backgroundColor: 'var(--color-wall)' }}
-              title="Lihat Pratinjau Tampilan Artikel"
-            >
-              <Eye size={14} className="text-blue-500" />
-              <span>Pratinjau Tampilan</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {notification && (
@@ -654,11 +636,16 @@ export default function EditArticlePage() {
       <ArticlePreviewModal
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
-        canPublish={canPublish && status !== 'PUBLISHED' && !isReadOnlyArticles}
+        canPublish={canPublish && status !== 'PUBLISHED'}
         isPublishing={isSaving && saveActionType === 'PUBLISHED'}
         onConfirmPublish={() => {
-          setIsPreviewOpen(false);
-          handleSave('PUBLISHED');
+          if (role === 'redaktur') {
+            setIsPreviewOpen(false);
+            setIsRedakturAlertOpen(true);
+          } else {
+            setIsPreviewOpen(false);
+            handleSave('PUBLISHED');
+          }
         }}
         article={{
           title,
@@ -671,6 +658,21 @@ export default function EditArticlePage() {
           authorRole: (user?.role as any) || 'superadmin',
           tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
         }}
+      />
+
+      {/* Alert SOP Redaksi Khusus Redaktur */}
+      <RedakturPublishAlertModal
+        isOpen={isRedakturAlertOpen}
+        onClose={() => setIsRedakturAlertOpen(false)}
+        onSubmitToEditorial={() => {
+          setIsRedakturAlertOpen(false);
+          handleSave('PENDING_REVIEW');
+        }}
+        onProceedDirectPublish={() => {
+          setIsRedakturAlertOpen(false);
+          handleSave('PUBLISHED');
+        }}
+        isProcessing={isSaving}
       />
     </div>
   );

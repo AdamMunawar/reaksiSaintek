@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
+import { RedakturPublishAlertModal } from '@/components/editorial/RedakturPublishAlertModal';
 import { PageTitle } from '@/components/ui/PageTitle';
 
 const STATUS_BADGES: Record<ArticleStatus, { label: string; bg: string; text: string }> = {
@@ -31,20 +32,15 @@ const STATUS_BADGES: Record<ArticleStatus, { label: string; bg: string; text: st
 };
 
 export default function AdminArticlesPage() {
-  const { user, role, canPublish, canWriteArticle, canEditArticle, canDeleteArticle, isReadOnlyArticles } = useAuth();
+  const { user, role, canPublish, canWriteArticle, canEditArticle, canDeleteArticle } = useAuth();
   const [articles, setArticles] = useState<Article[]>([]);
   const [availableRubriks, setAvailableRubriks] = useState<Array<{ slug: string; name: string }>>([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ArticleStatus | 'ALL'>(isReadOnlyArticles ? 'PUBLISHED' : 'ALL');
+  const [statusFilter, setStatusFilter] = useState<ArticleStatus | 'ALL'>('ALL');
   const [rubrikFilter, setRubrikFilter] = useState<string>('semua');
   const [articleToDelete, setArticleToDelete] = useState<Article | null>(null);
+  const [redakturArticleTarget, setRedakturArticleTarget] = useState<Article | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  useEffect(() => {
-    if (isReadOnlyArticles) {
-      setStatusFilter('PUBLISHED');
-    }
-  }, [isReadOnlyArticles]);
 
   useEffect(() => {
     const rList = db.getRubriks();
@@ -62,13 +58,13 @@ export default function AdminArticlesPage() {
 
   useEffect(() => {
     loadArticles();
-  }, [search, statusFilter, rubrikFilter, isReadOnlyArticles]);
+  }, [search, statusFilter, rubrikFilter]);
 
   const loadArticles = () => {
-    const effectiveStatus = isReadOnlyArticles ? 'PUBLISHED' : statusFilter;
+    const effectiveStatus = statusFilter;
     const list = db.getArticles({
       search: search || undefined,
-      status: effectiveStatus,
+      status: effectiveStatus === 'ALL' ? undefined : effectiveStatus,
       rubrik: rubrikFilter !== 'semua' ? rubrikFilter : undefined,
     });
     setArticles(list);
@@ -136,9 +132,7 @@ export default function AdminArticlesPage() {
             Manajemen Artikel
           </h1>
           <p className="text-xs mt-1" style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>
-            {isReadOnlyArticles
-              ? 'Mode Superadmin: Akses arsip artikel terbit (Hanya Baca / Read-Only).'
-              : 'Kelola seluruh berita, liputan, opini, dan publikasi portal LPM Reaksi.'}
+            Kelola seluruh berita, liputan, opini, dan publikasi portal LPM Reaksi.
           </p>
         </div>
 
@@ -220,29 +214,20 @@ export default function AdminArticlesPage() {
           <span className="text-[10px] font-bold uppercase tracking-wider mr-1" style={{ color: 'var(--color-muted)' }}>
             Status:
           </span>
-          {isReadOnlyArticles ? (
-            <span
-              className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-600 text-white"
-              style={{ fontFamily: 'var(--font-display)' }}
+          {(['ALL', 'PUBLISHED', 'PENDING_REVIEW', 'DRAFT', 'REVISION', 'REJECTED'] as const).map((st) => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                statusFilter === st
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : 'bg-[var(--color-wall)] text-[var(--color-foreground)] hover:opacity-75'
+              }`}
+              style={{ border: '1px solid var(--color-line)', fontFamily: 'var(--font-display)' }}
             >
-              Terbit Live (Superadmin Read-Only)
-            </span>
-          ) : (
-            (['ALL', 'PUBLISHED', 'PENDING_REVIEW', 'DRAFT', 'REVISION', 'REJECTED'] as const).map((st) => (
-              <button
-                key={st}
-                onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                  statusFilter === st
-                    ? 'bg-[var(--color-accent)] text-white'
-                    : 'bg-[var(--color-wall)] text-[var(--color-foreground)] hover:opacity-75'
-                }`}
-                style={{ border: '1px solid var(--color-line)', fontFamily: 'var(--font-display)' }}
-              >
-                {st === 'ALL' ? 'Semua' : STATUS_BADGES[st as ArticleStatus]?.label || st}
-              </button>
-            ))
-          )}
+              {st === 'ALL' ? 'Semua' : STATUS_BADGES[st as ArticleStatus]?.label || st}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -285,8 +270,7 @@ export default function AdminArticlesPage() {
                           )}
                           <div>
                             <Link
-                              href={isReadOnlyArticles ? getArticleUrl(art) : `/admin/artikel/${art.id}/edit`}
-                              target={isReadOnlyArticles ? '_blank' : undefined}
+                              href={`/admin/artikel/${art.id}/edit`}
                               className="font-bold text-xs hover:underline line-clamp-1 block"
                               style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
                             >
@@ -338,7 +322,6 @@ export default function AdminArticlesPage() {
                             title="Buka di Website"
                           >
                             <ExternalLink size={14} />
-                            {isReadOnlyArticles && <span className="text-[10px]">Baca</span>}
                           </Link>
                         )}
 
@@ -354,7 +337,13 @@ export default function AdminArticlesPage() {
 
                         {canPublish && art.status !== 'PUBLISHED' && (
                           <button
-                            onClick={() => handleQuickStatus(art.id, 'PUBLISHED')}
+                            onClick={() => {
+                              if (role === 'redaktur') {
+                                setRedakturArticleTarget(art);
+                              } else {
+                                handleQuickStatus(art.id, 'PUBLISHED');
+                              }
+                            }}
                             className="px-2 py-1 text-[9px] font-bold uppercase bg-emerald-600 text-white hover:opacity-80"
                             title="Terbitkan Langsung"
                           >
@@ -404,6 +393,34 @@ export default function AdminArticlesPage() {
         itemImage={articleToDelete?.coverImage}
         warningMessage="Tindakan ini tidak dapat dibatalkan. Seluruh isi tulisan beserta statistik pembaca akan dihapus secara permanen dari portal LPM Reaksi."
         confirmButtonText="Ya, Hapus Naskah"
+      />
+
+      {/* Alert SOP Redaksi Khusus Redaktur */}
+      <RedakturPublishAlertModal
+        isOpen={Boolean(redakturArticleTarget)}
+        onClose={() => setRedakturArticleTarget(null)}
+        onSubmitToEditorial={() => {
+          if (!redakturArticleTarget) return;
+          const target = redakturArticleTarget;
+          setRedakturArticleTarget(null);
+          handleQuickStatus(target.id, 'PENDING_REVIEW');
+          setNotification({
+            type: 'success',
+            message: `Naskah "${target.title}" berhasil diserahkan ke Meja Redaksi untuk ditinjau Pemred.`,
+          });
+          setTimeout(() => setNotification(null), 3500);
+        }}
+        onProceedDirectPublish={() => {
+          if (!redakturArticleTarget) return;
+          const target = redakturArticleTarget;
+          setRedakturArticleTarget(null);
+          handleQuickStatus(target.id, 'PUBLISHED');
+          setNotification({
+            type: 'success',
+            message: `Artikel "${target.title}" berhasil diterbitkan ke publik!`,
+          });
+          setTimeout(() => setNotification(null), 3500);
+        }}
       />
     </div>
   );

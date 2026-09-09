@@ -41,6 +41,8 @@ const fetchArticleData = cache(async (slug: string) => {
           coverCaption: r.cover_caption || '',
           tags: Array.isArray(r.tags) ? r.tags : [],
           views: r.views || 0,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
         } as Article;
       }
     }
@@ -146,7 +148,7 @@ export default async function ArticlePage({ params }: Props) {
         : `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`
     ],
     datePublished: article.publishedAt,
-    dateModified: article.publishedAt,
+    dateModified: article.updatedAt || article.publishedAt,
     author: [{
       '@type': 'Person',
       name: article.author || 'Redaksi LPM Reaksi',

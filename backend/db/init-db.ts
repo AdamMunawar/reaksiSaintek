@@ -74,6 +74,7 @@ export async function initPostgresDatabase() {
         read_time INTEGER DEFAULT 3,
         tags TEXT[] DEFAULT ARRAY[]::TEXT[],
         review_notes TEXT,
+        review_comments JSONB DEFAULT '[]'::jsonb,
         published_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -81,6 +82,7 @@ export async function initPostgresDatabase() {
   `);
 
   await query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS cover_caption TEXT;`);
+  await query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS review_comments JSONB DEFAULT '[]'::jsonb;`).catch(() => {});
   await query(`CREATE INDEX IF NOT EXISTS idx_articles_status_pub ON articles(status, published_at DESC);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_articles_rubrik ON articles(rubrik);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);`);

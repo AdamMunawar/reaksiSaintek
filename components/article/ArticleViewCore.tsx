@@ -8,6 +8,7 @@ import ArticleCard from '@/components/cards/ArticleCard';
 import {
   getRelatedArticles,
   formatDate,
+  formatDateTime,
   RUBRIK_META,
   Article,
 } from '@/lib/data';
@@ -27,6 +28,7 @@ import {
   Type,
   AlignLeft,
   AlignCenter,
+  History,
 } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { cleanArticleHtml } from '@/lib/utils/cleanHtml';
@@ -174,6 +176,8 @@ export default function ArticleViewCore({
             coverCaption: remoteArt.coverCaption || remoteArt.cover_caption,
             tags: remoteArt.tags || [],
             views: remoteArt.views || 0,
+            createdAt: remoteArt.createdAt || remoteArt.created_at,
+            updatedAt: remoteArt.updatedAt || remoteArt.updated_at,
           };
           setArticle(mapped);
           setViewCount(mapped.views);
@@ -354,6 +358,15 @@ export default function ArticleViewCore({
 
   const rubrikUrl = article.rubrik ? `/${article.rubrik}` : '/';
 
+  const pubTime = article?.publishedAt ? new Date(article.publishedAt).getTime() : 0;
+  const updateTime = article?.updatedAt ? new Date(article.updatedAt).getTime() : 0;
+  // Ditandai disunting jika ada updatedAt dan selisihnya minimal 1 menit setelah tanggal publish
+  const isEditedAfterPublish = Boolean(
+    pubTime > 0 &&
+    updateTime > 0 &&
+    (updateTime - pubTime > 60 * 1000)
+  );
+
   return (
     <div
       className="min-h-screen flex flex-col transition-colors"
@@ -410,6 +423,15 @@ export default function ArticleViewCore({
               </p>
               <p className="text-[11px] flex items-center gap-2 flex-wrap" style={{ color: 'var(--color-muted)' }}>
                 <span suppressHydrationWarning>{formatDate(article.publishedAt)}</span>
+                {isEditedAfterPublish && (
+                  <span
+                    className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                    title={`Disunting pada ${formatDateTime(article.updatedAt)}`}
+                    suppressHydrationWarning
+                  >
+                    Disunting
+                  </span>
+                )}
                 <span>·</span>
                 <span className="flex items-center gap-1">
                   <Clock size={11} />
@@ -509,6 +531,37 @@ export default function ArticleViewCore({
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: renderBody(article.content) }}
         />
+
+        {/* Catatan Penyuntingan Redaksi (Tampil di akhir artikel jika naskah disunting setelah publish) */}
+        {isEditedAfterPublish && (
+          <div
+            className="mt-8 p-4 rounded-md border flex items-start gap-3.5 text-xs sm:text-sm transition-colors"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-line)',
+              borderLeft: '4px solid #d97706',
+            }}
+            suppressHydrationWarning
+          >
+            <div className="p-2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+              <History size={17} />
+            </div>
+            <div className="leading-relaxed flex-1">
+              <p className="font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider text-[11px] mb-1">
+                Catatan Penyuntingan Redaksi
+              </p>
+              <p style={{ color: 'var(--color-foreground)' }}>
+                Artikel ini telah disunting pada{' '}
+                <time
+                  dateTime={article.updatedAt}
+                  className="font-semibold text-[var(--color-foreground)] underline decoration-amber-500/40 underline-offset-2"
+                >
+                  {formatDateTime(article.updatedAt)}
+                </time>.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Tags */}
         {article.tags && article.tags.length > 0 && (

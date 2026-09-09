@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           readTime: r.read_time || 3,
           read_time: r.read_time || 3,
           reviewNotes: r.review_notes,
+          reviewComments: r.review_comments || [],
           createdAt: r.created_at,
           updatedAt: r.updated_at,
         };
@@ -58,19 +59,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session || session.role === 'guest') {
     return NextResponse.json({ error: 'Akses ditolak. Silakan login untuk memperbarui artikel.' }, { status: 401 });
   }
-
-  // Superadmin is read-only for article editorial content
-  if (session.role === 'superadmin') {
-    return NextResponse.json({ error: 'SOP Redaksi: Akun Superadmin bersifat read-only untuk naskah editorial.' }, { status: 403 });
-  }
-
   try {
     const body = await req.json();
     const { title, slug, rubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags, reviewNotes } = body;
 
-    // Only Pemred and Redaktur can publish or update status to PUBLISHED
+    // Only Pemred, Redaktur, and Superadmin can publish or update status to PUBLISHED
     let targetStatus = status;
-    if (targetStatus === 'PUBLISHED' && session.role !== 'pemred' && session.role !== 'redaktur') {
+    if (targetStatus === 'PUBLISHED' && session.role !== 'pemred' && session.role !== 'redaktur' && session.role !== 'superadmin') {
       targetStatus = undefined; // Retain current or leave to review
     }
 
@@ -136,6 +131,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             views: r.views || 0,
             readTime: r.read_time || 3,
             reviewNotes: r.review_notes,
+            reviewComments: r.review_comments || [],
             createdAt: r.created_at,
             updatedAt: r.updated_at,
           };

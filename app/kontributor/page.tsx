@@ -22,7 +22,9 @@ import {
   ExternalLink,
   MessageSquare,
   Loader2,
+  X,
 } from 'lucide-react';
+import { InlineCommentSystem } from '@/components/editorial/InlineCommentSystem';
 import { getArticleUrl } from '@/lib/data';
 
 
@@ -40,6 +42,7 @@ export default function ContributorDashboard() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [filter, setFilter] = useState<ArticleStatus | 'ALL'>('ALL');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [selectedReviewArticle, setSelectedReviewArticle] = useState<Article | null>(null);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -68,6 +71,21 @@ export default function ContributorDashboard() {
       const contributorArticles = all.filter((a) => a.authorRole === 'kontributor');
       setArticles(contributorArticles);
     }
+
+    // Live sync from server with content & comments
+    fetch('/api/articles?includeContent=true')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          db.syncArticlesFromRemote(data);
+          if (user?.id) {
+            setArticles(data.filter((a: any) => a.authorId === user.id || a.authorRole === 'kontributor'));
+          } else {
+            setArticles(data.filter((a: any) => a.authorRole === 'kontributor'));
+          }
+        }
+      })
+      .catch((e) => console.warn('Fetch contributor remote articles error:', e));
   };
 
   const filteredArticles = filter === 'ALL'
@@ -264,7 +282,7 @@ export default function ContributorDashboard() {
               Riwayat Naskah yang Anda Kirim ({filteredArticles.length})
             </h2>
             <div className="flex gap-1">
-              {(['ALL', 'PENDING_REVIEW', 'PUBLISHED', 'DRAFT'] as const).map((st) => (
+              {(['ALL', 'REVISION', 'PENDING_REVIEW', 'PUBLISHED', 'DRAFT'] as const).map((st) => (
                 <button
                   key={st}
                   onClick={() => setFilter(st)}
@@ -321,15 +339,32 @@ export default function ContributorDashboard() {
                         {art.excerpt}
                       </p>
 
-                      {art.reviewNotes && (
-                        <div
-                          className="mt-2 p-2.5 text-xs rounded-none flex items-start gap-2 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
-                        >
-                          <MessageSquare size={14} className="mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="font-bold block">Catatan Meja Redaksi:</span>
-                            <span>{art.reviewNotes}</span>
+                      {((art.reviewComments && art.reviewComments.length > 0) || art.reviewNotes || art.status === 'REVISION') && (
+                        <div className="mt-2.5 p-3 rounded-none bg-amber-500/10 text-amber-900 dark:text-amber-200 border border-amber-500/25 space-y-2">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                              <MessageSquare size={14} className="flex-shrink-0" />
+                              <span>Catatan Meja Redaksi</span>
+                              {art.reviewComments && art.reviewComments.length > 0 && (
+                                <span className="px-1.5 py-0.2 text-[10px] bg-amber-600 text-white font-mono font-bold">
+                                  {art.reviewComments.length} Anotasi Kata/Kalimat
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedReviewArticle(art)}
+                              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 transition-colors"
+                              style={{ fontFamily: 'var(--font-display)' }}
+                            >
+                              <span>Buka & Balas Catatan</span>
+                            </button>
                           </div>
+                          {art.reviewNotes && (
+                            <p className="text-xs italic pl-5 leading-relaxed">
+                              &ldquo;{art.reviewNotes}&rdquo;
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -384,6 +419,66 @@ export default function ContributorDashboard() {
           )}
         </div>
       </main>
+
+      {/* Editorial Comments & Revision Modal */}
+      {selectedReviewArticle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-xs animate-fade-in overflow-y-auto">
+          <div
+            className="w-full max-w-5xl rounded-sm border shadow-2xl my-auto overflow-hidden flex flex-col max-h-[90vh]"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-keyline)',
+            }}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-line)] bg-amber-500/10">
+              <div className="flex items-center gap-2">
+                <MessageSquare size={18} className="text-amber-600" />
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200" style={{ fontFamily: 'var(--font-display)' }}>
+                    Catatan Revisi & Diskusi Redaksi
+                  </h3>
+                  <p className="text-[11px] text-[var(--color-muted)] line-clamp-1 font-bold">
+                    {selectedReviewArticle.title}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/kontributor/kirim?id=${selectedReviewArticle.id}`}
+                  className="px-3 py-1.5 bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider hover:opacity-80"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  Edit Naskah
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReviewArticle(null)}
+                  className="p-1.5 text-gray-500 hover:text-black dark:hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+              <InlineCommentSystem
+                key={selectedReviewArticle.id}
+                articleId={selectedReviewArticle.id}
+                content={selectedReviewArticle.content}
+                initialComments={selectedReviewArticle.reviewComments || []}
+                isEditor={false}
+                onCommentsChange={(newComms) => {
+                  setSelectedReviewArticle((prev) => (prev ? { ...prev, reviewComments: newComms } : null));
+                  setArticles((prev) =>
+                    prev.map((a) => (a.id === selectedReviewArticle.id ? { ...a, reviewComments: newComms } : a))
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Logout Loading Modal Overlay */}
       {isLoggingOut && (

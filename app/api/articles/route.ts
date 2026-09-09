@@ -135,9 +135,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Judul dan konten artikel wajib diisi.' }, { status: 400 });
     }
 
-    // Only Pemred and Redaktur can directly set status to PUBLISHED
+    // Superadmin, Pemred, and Redaktur can directly set status to PUBLISHED
     let targetStatus = status || 'DRAFT';
-    if (targetStatus === 'PUBLISHED' && session.role !== 'pemred' && session.role !== 'redaktur') {
+    if (targetStatus === 'PUBLISHED' && session.role !== 'superadmin' && session.role !== 'pemred' && session.role !== 'redaktur') {
       targetStatus = 'PENDING_REVIEW';
     }
 

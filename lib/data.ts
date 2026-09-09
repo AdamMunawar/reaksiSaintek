@@ -53,18 +53,20 @@ export interface Article {
   tags: string[];
   views: number;
   isFeatured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const RUBRIK_META: Record<Rubrik, { label: string; description: string; color: string; emoji?: string }> = {
   'kabar-kampus':  { label: 'Kabar Kampus',   description: 'Berita terkini seputar kampus FST & UIN SGD Bandung', color: '#2563EB', emoji: '' },
   'saintek':       { label: 'Saintek Update',  description: 'Perkembangan sains, teknologi, dan inovasi terkini', color: '#0891B2', emoji: '' },
-  'opini':         { label: 'Opini',           description: 'Pandangan kritis dan esai mahasiswa', color: '#7C3AED', emoji: '' },
-  'feature':       { label: 'Feature',         description: 'Laporan mendalam dan human interest', color: '#059669', emoji: '' },
-  'lensa-kata':    { label: 'Lensa Kata',      description: 'Ruang karya sastra — puisi, cerpen, prosa', color: '#DB2777', emoji: '' },
-  'infografik':    { label: 'Infografik',      description: 'Data dan fakta dalam visualisasi menarik', color: '#EA580C', emoji: '' },
-  'regional':      { label: 'Regional',        description: 'Berita daerah dan isu lokal Jawa Barat', color: '#D97706', emoji: '' },
-  'epaper':        { label: 'E-Paper',         description: 'Tabloid dan majalah digital LPM Reaksi', color: '#475569', emoji: '' },
-  'selisik':       { label: 'Selisik',         description: 'Investigasi dan liputan mendalam eksklusif', color: '#DC2626', emoji: '' },
+  'opini':         { label: 'Opini',           description: 'Gagasan kritis, kolom, dan perspektif mahasiswa',    color: '#D97706', emoji: '' },
+  'feature':       { label: 'Feature',         description: 'Kisah mendalam, profil inspiratif, dan narasi humanis', color: '#7C3AED', emoji: '' },
+  'lensa-kata':    { label: 'Lensa & Sastra',  description: 'Karya sastra, puisi, cerpen, dan esai budaya',      color: '#059669', emoji: '' },
+  'infografik':    { label: 'Infografik',      description: 'Visualisasi data dan sajian informasi grafis',       color: '#EA580C', emoji: '' },
+  'regional':      { label: 'Regional',        description: 'Sorotan isu lokal Jawa Barat dan sekitarnya',        color: '#DC2626', emoji: '' },
+  'epaper':        { label: 'E-Paper',         description: 'Arsip terbitan cetak digital dan buletin kampus',    color: '#4B5563', emoji: '' },
+  'selisik':       { label: 'Selisik',         description: 'Laporan investigasi mendalam dan data jurnalisme',   color: '#B91C1C', emoji: '' },
 };
 
 export const RUBRIKS = (Object.keys(RUBRIK_META) as Rubrik[]).map((slug) => ({
@@ -100,6 +102,8 @@ export function getAllActiveArticles(): Article[] {
           tags: a.tags || [],
           views: a.views || 0,
           isFeatured: a.rubrik === 'selisik' || Boolean(a.views && a.views > 200),
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
         }));
     }
   } catch (err) {
@@ -181,6 +185,31 @@ export function formatDate(dateStr?: string): string {
       year: 'numeric',
       timeZone: 'Asia/Jakarta',
     }).format(new Date(dateStr));
+  } catch {
+    return dateStr;
+  }
+}
+
+export function formatDateTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    const dateFormatted = new Intl.DateTimeFormat('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Jakarta',
+    }).format(d);
+
+    const timeFormatted = new Intl.DateTimeFormat('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Jakarta',
+    }).format(d);
+
+    return `${dateFormatted} pukul ${timeFormatted.replace('.', ':')} WIB`;
   } catch {
     return dateStr;
   }

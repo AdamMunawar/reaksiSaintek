@@ -21,6 +21,7 @@ import {
   Sparkles,
   Loader2,
 } from 'lucide-react';
+import { InlineCommentSystem } from '@/components/editorial/InlineCommentSystem';
 
 export default function ReviewHubPage() {
   const { user, canReview, role } = useAuth();
@@ -286,11 +287,17 @@ export default function ReviewHubPage() {
                   </div>
                 )}
 
-                <div
-                  className="prose dark:prose-invert max-w-none text-sm font-normal leading-relaxed whitespace-pre-line py-4 border-t border-b"
-                  style={{ borderColor: 'var(--color-line)', fontFamily: 'var(--font-body)' }}
-                >
-                  {selectedArticle.content}
+                <div className="py-2 border-t border-b" style={{ borderColor: 'var(--color-line)' }}>
+                  <InlineCommentSystem
+                    key={selectedArticle.id}
+                    articleId={selectedArticle.id}
+                    content={selectedArticle.content}
+                    initialComments={selectedArticle.reviewComments || []}
+                    isEditor={true}
+                    onCommentsChange={(newComments) => {
+                      setSelectedArticle((prev) => (prev ? { ...prev, reviewComments: newComments } : null));
+                    }}
+                  />
                 </div>
               </div>
 

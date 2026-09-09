@@ -32,24 +32,30 @@ const STATUS_BADGES: Record<ArticleStatus, { label: string; bg: string; text: st
 };
 
 export default function AdminDashboardPage() {
-  const { user, role, canReview, canManagePages, canWriteArticle, isReadOnlyArticles } = useAuth();
+  const { user, role, canReview, canManagePages, canWriteArticle } = useAuth();
   const [articles, setArticles] = useState<Article[]>([]);
   const [pendingArticles, setPendingArticles] = useState<Article[]>([]);
 
   useEffect(() => {
     loadData();
-  }, [isReadOnlyArticles]);
+  }, []);
 
   const loadData = () => {
     const all = db.getArticles();
-    if (isReadOnlyArticles) {
-      const published = all.filter((a) => a.status === 'PUBLISHED');
-      setArticles(published);
-      setPendingArticles([]);
-    } else {
-      setArticles(all);
-      setPendingArticles(all.filter((a) => a.status === 'PENDING_REVIEW'));
-    }
+    setArticles(all);
+    setPendingArticles(all.filter((a) => a.status === 'PENDING_REVIEW'));
+
+    // Live sync dari PostgreSQL
+    fetch('/api/articles')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          db.syncArticlesFromRemote(data);
+          setArticles(data);
+          setPendingArticles(data.filter((a: any) => a.status === 'PENDING_REVIEW'));
+        }
+      })
+      .catch((e) => console.warn('Fetch admin remote articles error:', e));
   };
 
   const totalViews = articles.reduce((acc, a) => acc + (a.views || 0), 0);
@@ -386,15 +392,13 @@ export default function AdminDashboardPage() {
                       <ExternalLink size={12} />
                     </Link>
                   )}
-                  {!isReadOnlyArticles && (
-                    <Link
+                  <Link
                       href={`/admin/artikel/${art.id}/edit`}
                       className="px-2.5 py-1 text-xs font-bold uppercase border hover:opacity-70"
                       style={{ borderColor: 'var(--color-line)', fontFamily: 'var(--font-display)' }}
                     >
                       Edit
                     </Link>
-                  )}
                 </div>
               </div>
             );

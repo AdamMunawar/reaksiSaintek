@@ -146,14 +146,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const role: UserRole = rawRole as UserRole;
   const isLoggedIn = !!user && role !== 'guest';
 
-  const isReadOnlyArticles = role === 'superadmin';
-  const canPublish = role === 'pemred' || role === 'redaktur';
-  const canReview = role === 'pemred' || role === 'redaktur';
+  const isReadOnlyArticles = false;
+  const canPublish = role === 'superadmin' || role === 'pemred' || role === 'redaktur';
+  const canReview = role === 'superadmin' || role === 'pemred' || role === 'redaktur';
   const canManageUsers = role === 'superadmin';
   const canManagePages = role === 'superadmin';
-  const canWriteArticle = role === 'pemred' || role === 'redaktur' || role === 'pengurus' || role === 'kontributor';
-  const canEditArticle = role === 'pemred' || role === 'redaktur';
-  const canDeleteArticle = role === 'pemred' || role === 'redaktur';
+  const canWriteArticle = role === 'superadmin' || role === 'pemred' || role === 'redaktur' || role === 'pengurus' || role === 'kontributor';
+  const canEditArticle = role === 'superadmin' || role === 'pemred' || role === 'redaktur';
+  const canDeleteArticle = role === 'superadmin' || role === 'pemred' || role === 'redaktur';
 
   return (
     <AuthContext.Provider

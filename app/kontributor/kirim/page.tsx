@@ -22,13 +22,20 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { Article } from '@/lib/db/schema';
+import { InlineCommentSystem } from '@/components/editorial/InlineCommentSystem';
 
 function ContributorFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
   const { user } = useAuth();
+  const [articleDetail, setArticleDetail] = useState<Article | null>(null);
+  const [isReviewNotesOpen, setIsReviewNotesOpen] = useState(true);
 
   // Author details
   const [authorName, setAuthorName] = useState(user?.name || '');
@@ -72,6 +79,7 @@ function ContributorFormContent() {
     if (editId) {
       const existing = db.getArticleById(editId);
       if (existing) {
+        setArticleDetail(existing);
         setTitle(existing.title);
         setRubrik(existing.rubrik);
         setExcerpt(existing.excerpt);
@@ -84,6 +92,26 @@ function ContributorFormContent() {
         if (existing.authorPhone) setAuthorPhone(existing.authorPhone);
         if (existing.authorBio) setAuthorBio(existing.authorBio);
       }
+
+      fetch(`/api/articles/${editId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((remote) => {
+          if (remote) {
+            setArticleDetail(remote);
+            setTitle(remote.title);
+            setRubrik(remote.rubrik);
+            setExcerpt(remote.excerpt);
+            setContent(remote.content);
+            setCoverImage(remote.coverImage || remote.cover_image || '');
+            if (remote.coverCaption || remote.cover_caption) setCoverCaption(remote.coverCaption || remote.cover_caption);
+            if (remote.tags) setTagsInput(Array.isArray(remote.tags) ? remote.tags.join(', ') : remote.tags);
+            if (remote.authorName || remote.author_name) setAuthorName(remote.authorName || remote.author_name);
+            if (remote.authorInstitution) setAuthorInstitution(remote.authorInstitution);
+            if (remote.authorPhone) setAuthorPhone(remote.authorPhone);
+            if (remote.authorBio) setAuthorBio(remote.authorBio);
+          }
+        })
+        .catch((e) => console.warn('Fetch edit article error:', e));
     }
   }, [editId]);
 
@@ -224,6 +252,59 @@ function ContributorFormContent() {
           >
             {notification.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
             <span>{notification.message}</span>
+          </div>
+        )}
+        {/* Editorial Notes & Annotations Section if reviewing/revising */}
+        {articleDetail && ((articleDetail.reviewComments && articleDetail.reviewComments.length > 0) || articleDetail.reviewNotes || articleDetail.status === 'REVISION') && (
+          <div className="mb-8 rounded-sm overflow-hidden border-2 border-amber-500 bg-[var(--color-surface)] shadow-md">
+            <div
+              onClick={() => setIsReviewNotesOpen(!isReviewNotesOpen)}
+              className="p-4 bg-amber-500/15 border-b border-amber-500/30 flex items-center justify-between cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare size={18} className="text-amber-600" />
+                <div>
+                  <h2 className="text-xs font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-200" style={{ fontFamily: 'var(--font-display)' }}>
+                    Catatan Redaksi & Anotasi Naskah
+                  </h2>
+                  <span className="text-[11px] text-amber-700 dark:text-amber-300 font-semibold">
+                    {articleDetail.reviewComments?.length || 0} catatan kata/kalimat & komentar tim redaksi
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="p-1 text-amber-700 hover:text-amber-900 dark:text-amber-300"
+              >
+                {isReviewNotesOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+
+            {isReviewNotesOpen && (
+              <div className="p-4 sm:p-6 space-y-4">
+                {articleDetail.reviewNotes && (
+                  <div className="p-3 bg-amber-500/10 border-l-4 border-amber-500 text-xs">
+                    <span className="font-bold block text-amber-800 dark:text-amber-200 uppercase tracking-wider mb-1">
+                      Instruksi Umum Redaktur:
+                    </span>
+                    <p className="italic text-[var(--color-foreground)] leading-relaxed">
+                      &ldquo;{articleDetail.reviewNotes}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                <InlineCommentSystem
+                  key={articleDetail.id}
+                  articleId={articleDetail.id}
+                  content={articleDetail.content}
+                  initialComments={articleDetail.reviewComments || []}
+                  isEditor={false}
+                  onCommentsChange={(newComms) => {
+                    setArticleDetail((prev) => (prev ? { ...prev, reviewComments: newComms } : null));
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
 

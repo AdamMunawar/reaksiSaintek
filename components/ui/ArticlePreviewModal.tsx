@@ -13,8 +13,10 @@ import {
   Smartphone,
   Loader2,
   Tag,
-  ArrowLeft
+  ArrowLeft,
+  ShieldAlert,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/authContext';
 import { db } from '@/lib/db/repository';
 import { cleanArticleHtml, extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 
@@ -46,6 +48,7 @@ export default function ArticlePreviewModal({
   canPublish = true,
   article,
 }: ArticlePreviewModalProps) {
+  const { role } = useAuth();
   const [viewport, setViewport] = useState<'desktop' | 'mobile'>('desktop');
 
   if (!isOpen) return null;
@@ -294,29 +297,38 @@ export default function ArticlePreviewModal({
             <span>Kembali Edit Naskah</span>
           </button>
 
-          {canPublish && onConfirmPublish && (
-            <button
-              type="button"
-              disabled={isPublishing || !article.coverImage}
-              onClick={() => {
-                onConfirmPublish();
-              }}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 text-xs font-extrabold uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-md"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {isPublishing ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>Menerbitkan ke Publik...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={15} />
-                  <span>Konfirmasi &amp; Terbitkan Sekarang</span>
-                </>
-              )}
-            </button>
-          )}
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto justify-end">
+            {role === 'redaktur' && canPublish && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25">
+                <ShieldAlert size={14} className="text-amber-600 flex-shrink-0" />
+                <span>SOP Redaksi: Direkomendasikan serahkan ke Meja Redaksi</span>
+              </div>
+            )}
+
+            {canPublish && onConfirmPublish && (
+              <button
+                type="button"
+                disabled={isPublishing || !article.coverImage}
+                onClick={() => {
+                  onConfirmPublish();
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 text-xs font-extrabold uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-md"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {isPublishing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Menerbitkan ke Publik...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Konfirmasi &amp; Terbitkan Sekarang</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

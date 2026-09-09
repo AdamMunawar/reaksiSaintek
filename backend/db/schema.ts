@@ -20,6 +20,28 @@ export interface User {
 
 export type ArticleStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED' | 'REVISION';
 
+export interface ReviewReply {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface ReviewComment {
+  id: string;
+  articleId: string;
+  highlightedText: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  content: string;
+  createdAt: string;
+  resolved?: boolean;
+  replies?: ReviewReply[];
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -37,6 +59,7 @@ export interface Article {
   authorBio?: string;
   status: ArticleStatus;
   reviewNotes?: string;
+  reviewComments?: ReviewComment[];
   tags: string[];
   views?: number;
   readTime?: number;
