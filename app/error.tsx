@@ -2,7 +2,10 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import { AlertTriangle, RefreshCw, Home, Compass } from 'lucide-react';
+import { PageTitle } from '@/components/ui/PageTitle';
 
 export default function GlobalError({
   error,
@@ -12,63 +15,70 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log masked/sanitized error to server or internal logger if available
-    // Raw error stack is intentionally not rendered in DOM for security
+    // Log masked error for internal analytics if needed
   }, [error]);
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 transition-colors"
+      className="min-h-screen flex flex-col transition-colors"
       style={{ backgroundColor: 'var(--color-wall)', color: 'var(--color-foreground)' }}
     >
-      <div
-        className="max-w-md w-full p-8 text-center rounded-sm"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          border: '2px solid var(--color-keyline)',
-          boxShadow: 'var(--shadow-hard)',
-        }}
-      >
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4" style={{ backgroundColor: 'rgba(220, 38, 38, 0.1)', color: '#dc2626' }}>
-          <AlertCircle size={26} />
-        </div>
+      <PageTitle title="Terjadi Kendala Memuat Halaman" />
+      <Header />
 
-        <h2
-          className="text-lg font-extrabold uppercase tracking-tight mb-2"
-          style={{ fontFamily: 'var(--font-display)' }}
+      <main className="flex-1 flex items-center justify-center p-4 py-16 sm:py-24">
+        <div
+          className="max-w-lg w-full p-8 sm:p-12 text-center rounded-2xl border transition-all duration-300"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-line)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          }}
         >
-          Terjadi Kendala Memuat Halaman
-        </h2>
+          {/* Icon Badge */}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shadow-inner">
+            <AlertTriangle size={32} />
+          </div>
 
-        <p className="text-xs mb-6 leading-relaxed" style={{ color: 'var(--color-muted)' }}>
-          Maaf, sistem sedang mengalami kendala sementara. Silakan coba memuat ulang halaman atau kembali ke beranda.
-        </p>
-
-        <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => reset()}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-transform hover:-translate-y-0.5"
-            style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+          <h1
+            className="text-2xl sm:text-3xl font-black uppercase tracking-tight mb-3"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
           >
-            <RefreshCw size={13} />
-            <span>Muat Ulang</span>
-          </button>
+            Kendala Sistem Sementara
+          </h1>
 
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-opacity hover:opacity-75"
-            style={{
-              border: '1px solid var(--color-line)',
-              color: 'var(--color-foreground)',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            <Home size={13} />
-            <span>Beranda</span>
-          </Link>
+          <p className="text-xs sm:text-sm mb-8 leading-relaxed max-w-md mx-auto" style={{ color: 'var(--color-muted)' }}>
+            Permintaan Anda belum dapat diproses secara optimal saat ini. Tim telah mencatat kondisi ini untuk segera dipulihkan.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => reset()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white rounded-lg transition-transform hover:-translate-y-0.5 shadow-md cursor-pointer"
+              style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+            >
+              <RefreshCw size={14} />
+              <span>Coba Muat Ulang</span>
+            </button>
+
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg border transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              style={{
+                borderColor: 'var(--color-line)',
+                color: 'var(--color-foreground)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              <Home size={14} />
+              <span>Ke Beranda</span>
+            </Link>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }

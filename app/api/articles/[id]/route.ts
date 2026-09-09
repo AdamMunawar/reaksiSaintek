@@ -3,6 +3,7 @@ import { getSession, sanitizeArticleContent } from '@/backend/auth/security';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 import { query } from '@/backend/db/postgres';
 import { db } from '@/backend/db/repository';
+import { apiErrorResponse } from '@/lib/utils/apiResponse';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const art = db.getArticleById(id) || db.getArticleBySlug(id);
   if (!art) {
-    return NextResponse.json({ error: 'Artikel tidak ditemukan.' }, { status: 404 });
+    return apiErrorResponse(req, 'Artikel tidak ditemukan dalam database atau arsip redaksi.', 404, 'Artikel Tidak Ditemukan');
   }
   return NextResponse.json(art);
 }
@@ -57,7 +58,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const session = await getSession();
 
   if (!session || session.role === 'guest') {
-    return NextResponse.json({ error: 'Akses ditolak. Silakan login untuk memperbarui artikel.' }, { status: 401 });
+    return apiErrorResponse(req, 'Akses ditolak. Silakan login dengan akun redaksi untuk memperbarui artikel.', 401, 'Akses Ditolak');
   }
   try {
     const body = await req.json();
@@ -162,7 +163,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json(updated);
   } catch (error: any) {
     console.error('Error updating article:', error);
-    return NextResponse.json({ error: 'Gagal memperbarui artikel.' }, { status: 500 });
+    return apiErrorResponse(req, 'Gagal memperbarui artikel.', 500);
   }
 }
 
@@ -171,7 +172,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const session = await getSession();
 
   if (!session || (session.role !== 'pemred' && session.role !== 'redaktur' && session.role !== 'superadmin')) {
-    return NextResponse.json({ error: 'Akses ditolak. Hanya Pemred, Redaktur, atau Superadmin yang berhak menghapus artikel.' }, { status: 403 });
+    return apiErrorResponse(req, 'Akses ditolak. Hanya Pemred, Redaktur, atau Superadmin yang berhak menghapus artikel.', 403, 'Wewenang Terbatas');
   }
 
   try {
@@ -182,6 +183,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ success: true, message: 'Artikel berhasil dihapus secara permanen.' });
   } catch (error: any) {
     console.error('Error deleting article:', error);
-    return NextResponse.json({ error: 'Gagal menghapus artikel.' }, { status: 500 });
+    return apiErrorResponse(req, 'Gagal menghapus artikel.', 500);
   }
 }

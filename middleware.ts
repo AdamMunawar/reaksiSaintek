@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { apiErrorResponse } from '@/lib/utils/apiResponse';
 
 export const AUTH_COOKIE_NAME = 'reaksi_session';
 
@@ -71,11 +72,11 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/users') || pathname.startsWith('/api/upload')) {
     const sessionCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (!sessionCookie) {
-      return NextResponse.json({ error: 'Akses ditolak. Sesi login diperlukan.' }, { status: 401 });
+      return apiErrorResponse(request, 'Akses ditolak. Sesi login diperlukan untuk mengakses endpoint ini.', 401, 'Akses Ditolak');
     }
     const parts = sessionCookie.split('.');
     if (parts.length !== 3) {
-      return NextResponse.json({ error: 'Sesi login tidak valid.' }, { status: 401 });
+      return apiErrorResponse(request, 'Sesi login tidak valid atau telah kedaluwarsa.', 401, 'Sesi Tidak Valid');
     }
   }
 
