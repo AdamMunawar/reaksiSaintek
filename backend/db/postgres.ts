@@ -42,13 +42,13 @@ export async function query<T extends QueryResultRow = any>(
     const res = await p.query<T>(text, params);
     const duration = Date.now() - start;
     if (process.env.NODE_ENV === 'development') {
-      if (duration > 200) {
-        console.warn(`[Slow Query ${duration}ms]: ${text}`);
+      if (duration > 3000) {
+        console.info(`[DB Query ${duration}ms]: ${text}`);
       }
     }
     return res;
   } catch (error) {
-    console.error(`[PostgreSQL Query Error]: ${text}`, error);
+    console.error('[500] Database Connection / Query Exception');
     pool = null; // Reset pool on connection error to ensure fresh retry
     throw error;
   }

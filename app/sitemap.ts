@@ -57,12 +57,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.85,
   }));
 
-  // 3. Dynamic Article Pages
+  // 3. Dynamic Article Pages (canonical: /[rubrik]/[slug])
   const allArticles = db.getArticles() || [];
   const publishedArticles = allArticles.filter((art) => art.status === 'PUBLISHED');
 
   const articlePages: MetadataRoute.Sitemap = publishedArticles.map((art) => ({
-    url: `${baseUrl}/artikel/${art.slug}`,
+    url: art.rubrik
+      ? `${baseUrl}/${art.rubrik}/${art.slug}`
+      : `${baseUrl}/artikel/${art.slug}`,
     lastModified: art.updatedAt ? new Date(art.updatedAt) : now,
     changeFrequency: 'weekly',
     priority: 0.9,

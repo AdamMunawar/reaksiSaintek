@@ -8,13 +8,22 @@ interface ArticleCardProps {
   variant?: 'default' | 'horizontal' | 'minimal';
 }
 
+/** Returns canonical rubrik-based article URL: /[rubrik]/[slug] */
+function articleHref(article: Article): string {
+  if (article.rubrik && article.slug) {
+    return `/${article.rubrik}/${article.slug}`;
+  }
+  return `/artikel/${article.slug}`;
+}
+
 export default function ArticleCard({ article, variant = 'default' }: ArticleCardProps) {
+  const href = articleHref(article);
 
   /* ── HORIZONTAL VARIANT (Sidebar & Lists) ── */
   if (variant === 'horizontal') {
     return (
       <Link
-        href={`/artikel/${article.slug}`}
+        href={href}
         className="group flex items-start justify-between gap-6 sm:gap-8 py-5 sm:py-6 hover:opacity-95 transition-opacity"
       >
         <div className="flex-1 min-w-0 pr-2">
@@ -44,7 +53,7 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
   /* ── MINIMAL VARIANT ── */
   if (variant === 'minimal') {
     return (
-      <Link href={`/artikel/${article.slug}`} className="group flex items-start gap-3 py-3">
+      <Link href={href} className="group flex items-start gap-3 py-3">
         <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0 mt-2.5" />
         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-relaxed">
           {article.title}
@@ -53,10 +62,10 @@ export default function ArticleCard({ article, variant = 'default' }: ArticleCar
     );
   }
 
-  /* ── DEFAULT SUARAMAHASISWA EDITORIAL CARD (Simpel, Minimalis, Un-cramped) ── */
+  /* ── DEFAULT EDITORIAL CARD ── */
   return (
     <Link
-      href={`/artikel/${article.slug}`}
+      href={href}
       className="group block cursor-pointer transition-opacity hover:opacity-95"
     >
       {/* Clean photo with rounded-xl */}

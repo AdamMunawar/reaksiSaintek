@@ -11,6 +11,7 @@ import {
   RUBRIK_META,
   Rubrik,
   Article,
+  getArticleUrl,
 } from '@/lib/data';
 import { db } from '@/lib/db/repository';
 import { RubrikItem } from '@/lib/db/schema';
@@ -117,7 +118,7 @@ function Rule() {
 function HorizCard({ article }: { article: any }) {
   return (
     <Link
-      href={`/artikel/${article.slug}`}
+      href={getArticleUrl(article)}
       className="group flex gap-3 transition-opacity hover:opacity-75"
       style={{ paddingBottom: '14px', marginBottom: '14px', borderBottom: '1px solid var(--color-line)' }}
     >
@@ -234,7 +235,7 @@ export default function HomePage() {
                 {[...latestFallback, ...latestFallback].map((a, i) => (
                   <Link
                     key={i}
-                    href={`/artikel/${a.slug}`}
+                    href={getArticleUrl(a)}
                     className="inline-block mr-12 opacity-90 hover:opacity-100 hover:underline"
                   >
                     {a.title}
@@ -382,7 +383,7 @@ export default function HomePage() {
                 <div>
                   {mainHero && (
                     <Link
-                      href={`/artikel/${mainHero.slug}`}
+                      href={getArticleUrl(mainHero)}
                       className="group block mb-5"
                     >
                       <div style={{
@@ -451,7 +452,7 @@ export default function HomePage() {
                       {radarArticles.slice(0, 2).map((article) => (
                         <Link
                           key={article.id}
-                          href={`/artikel/${article.slug}`}
+                          href={getArticleUrl(article)}
                           className="group block"
                         >
                           <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', overflow: 'hidden', borderRadius: 3, marginBottom: 10 }}>
@@ -490,7 +491,7 @@ export default function HomePage() {
                     {kabarKampus.map((item) => (
                       <Link
                         key={item.id}
-                        href={`/artikel/${item.slug}`}
+                        href={getArticleUrl(item)}
                         className="group flex items-start gap-3 transition-opacity hover:opacity-70"
                         style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--color-line)' }}
                       >
@@ -521,7 +522,7 @@ export default function HomePage() {
                         {trending.slice(0, 4).map((item, idx) => (
                           <Link
                             key={item.id}
-                            href={`/artikel/${item.slug}`}
+                            href={getArticleUrl(item)}
                             className="group flex items-start gap-2.5 transition-opacity hover:opacity-70"
                             style={{ paddingBottom: 12, marginBottom: 12, borderBottom: idx < 3 ? '1px solid var(--color-line)' : 'none' }}
                           >
@@ -612,7 +613,7 @@ export default function HomePage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]">
                       <Link
-                        href={`/artikel/${selisikLead.slug}`}
+                        href={getArticleUrl(selisikLead)}
                         className="group block p-5 sm:p-7"
                         style={{ borderRight: '1px solid rgba(255,255,255,0.1)' }}
                       >
@@ -657,7 +658,7 @@ export default function HomePage() {
                         {selisikRest.slice(0, 2).map((item) => (
                           <Link
                             key={item.id}
-                            href={`/artikel/${item.slug}`}
+                            href={getArticleUrl(item)}
                             className="group flex gap-3 transition-opacity hover:opacity-70"
                             style={{ paddingBottom: 16, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
                           >
@@ -699,7 +700,7 @@ export default function HomePage() {
                     {saintekLead && (
                       <div>
                         <SectionHeader title="Saintek Update" href="/saintek" color="#0891b2" />
-                        <Link href={`/artikel/${saintekLead.slug}`} className="group block mb-5">
+                        <Link href={getArticleUrl(saintekLead)} className="group block mb-5">
                           <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', overflow: 'hidden', borderRadius: 4, marginBottom: 12 }}>
                             <img
                               src={saintekLead.thumbnail}
@@ -744,7 +745,7 @@ export default function HomePage() {
                           {opini.map((item, i) => (
                             <Link
                               key={item.id}
-                              href={`/artikel/${item.slug}`}
+                              href={getArticleUrl(item)}
                               className="group block transition-opacity hover:opacity-70"
                               style={{ paddingBottom: 18, marginBottom: 18, borderBottom: i < opini.length - 1 ? '1px solid var(--color-line)' : 'none' }}
                             >
@@ -806,7 +807,7 @@ export default function HomePage() {
                           {lensaKata.map((item, i) => (
                             <Link
                               key={item.id}
-                              href={`/artikel/${item.slug}`}
+                              href={getArticleUrl(item)}
                               className="group flex gap-3 transition-opacity hover:opacity-70"
                               style={{ paddingBottom: 16, marginBottom: 16, borderBottom: i < lensaKata.length - 1 ? '1px solid var(--color-line)' : 'none' }}
                             >
@@ -849,7 +850,7 @@ export default function HomePage() {
                           {infografik.map((item) => (
                             <Link
                               key={item.id}
-                              href={`/artikel/${item.slug}`}
+                              href={getArticleUrl(item)}
                               className="group block mb-4"
                             >
                               <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', borderRadius: 3, marginBottom: 8 }}>
@@ -884,7 +885,7 @@ export default function HomePage() {
                           {latestNews.slice(0, 5).map((item, i) => (
                             <Link
                               key={item.id}
-                              href={`/artikel/${item.slug}`}
+                              href={getArticleUrl(item)}
                               className="group block transition-opacity hover:opacity-70"
                               style={{ paddingBottom: 12, marginBottom: 12, borderBottom: i < 4 ? '1px solid var(--color-line)' : 'none' }}
                             >

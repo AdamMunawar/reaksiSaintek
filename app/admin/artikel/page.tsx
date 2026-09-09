@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth/authContext';
 import { db } from '@/lib/db/repository';
 import { Article, ArticleStatus } from '@/lib/db/schema';
-import { RUBRIK_META } from '@/lib/data';
+import { RUBRIK_META, getArticleUrl } from '@/lib/data';
 import {
   PlusCircle,
   Search,
@@ -285,7 +285,7 @@ export default function AdminArticlesPage() {
                           )}
                           <div>
                             <Link
-                              href={isReadOnlyArticles ? `/artikel/${art.slug}` : `/admin/artikel/${art.id}/edit`}
+                              href={isReadOnlyArticles ? getArticleUrl(art) : `/admin/artikel/${art.id}/edit`}
                               target={isReadOnlyArticles ? '_blank' : undefined}
                               className="font-bold text-xs hover:underline line-clamp-1 block"
                               style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
@@ -332,7 +332,7 @@ export default function AdminArticlesPage() {
                       <td className="p-3.5 whitespace-nowrap text-right space-x-2">
                         {art.status === 'PUBLISHED' && (
                           <Link
-                            href={`/artikel/${art.slug}`}
+                            href={getArticleUrl(art)}
                             target="_blank"
                             className="p-1.5 inline-flex items-center gap-1 text-emerald-600 hover:opacity-70 font-semibold"
                             title="Buka di Website"

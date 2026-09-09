@@ -20,6 +20,7 @@ import {
   Users,
   ArrowRight,
 } from 'lucide-react';
+import { getArticleUrl } from '@/lib/data';
 
 
 const STATUS_BADGES: Record<ArticleStatus, { label: string; bg: string; text: string }> = {
@@ -377,7 +378,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {art.status === 'PUBLISHED' && (
                     <Link
-                      href={`/artikel/${art.slug}`}
+                      href={getArticleUrl(art)}
                       target="_blank"
                       className="text-xs font-bold uppercase tracking-wider text-emerald-600 hover:underline inline-flex items-center gap-1"
                     >

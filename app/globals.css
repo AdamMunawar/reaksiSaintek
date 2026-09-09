@@ -253,14 +253,42 @@
 .article-body,
 .article-content,
 .reaksi-wysiwyg {
-  font-family: var(--font-serif), Georgia, serif !important;
-  font-size: 1.0625rem;
-  line-height: 1.85 !important;
+  font-family: var(--article-font-family, var(--font-serif), Georgia, serif);
+  font-size: var(--article-font-size, 1.0625rem);
+  line-height: var(--article-line-height, 1.85);
   color: var(--color-foreground) !important;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, font-size 0.15s ease;
 }
 
-/* Force all text elements, spans, and paragraphs from external copy-paste (e.g. Google Docs / Word) to inherit theme color and font */
+/* Explicit font family mode classes that guarantee font switching */
+.article-body.font-mode-serif,
+.article-body.font-mode-serif p,
+.article-body.font-mode-serif span,
+.article-body.font-mode-serif div:not([data-reaksi-image]),
+.article-body.font-mode-serif li,
+.article-body.font-mode-serif blockquote {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif !important;
+}
+
+.article-body.font-mode-sans,
+.article-body.font-mode-sans p,
+.article-body.font-mode-sans span,
+.article-body.font-mode-sans div:not([data-reaksi-image]),
+.article-body.font-mode-sans li,
+.article-body.font-mode-sans blockquote {
+  font-family: var(--font-sans), var(--font-body), system-ui, -apple-system, sans-serif !important;
+}
+
+.article-body.font-mode-mono,
+.article-body.font-mode-mono p,
+.article-body.font-mode-mono span,
+.article-body.font-mode-mono div:not([data-reaksi-image]),
+.article-body.font-mode-mono li,
+.article-body.font-mode-mono blockquote {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, Courier, monospace !important;
+}
+
+/* Force all text elements from external copy-paste to inherit theme color and font */
 .article-body p,
 .article-body span,
 .article-body div:not([data-reaksi-image]),
@@ -273,7 +301,7 @@
 .reaksi-wysiwyg span,
 .reaksi-wysiwyg div:not([data-reaksi-image]),
 .reaksi-wysiwyg li {
-  font-family: inherit !important;
+  font-family: inherit;
   color: var(--color-foreground) !important;
   background-color: transparent !important;
 }
@@ -281,7 +309,7 @@
 .article-body p,
 .article-content p {
   margin-bottom: 1.5rem;
-  line-height: 1.85;
+  line-height: var(--article-line-height, 1.85);
 }
 
 .article-body h1, .article-body h2,

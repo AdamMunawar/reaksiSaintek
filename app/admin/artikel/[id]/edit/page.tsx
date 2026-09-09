@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/authContext';
 import { db } from '@/lib/db/repository';
 import { Article, ArticleStatus } from '@/lib/db/schema';
-import { RUBRIK_META, Rubrik } from '@/lib/data';
+import { RUBRIK_META, Rubrik, getArticleUrl } from '@/lib/data';
 import RichEditor from '@/components/editor/RichEditor';
 import ImageUploader from '@/components/ui/ImageUploader';
 import {
@@ -244,7 +244,7 @@ export default function EditArticlePage() {
 
         {article.status === 'PUBLISHED' && (
           <Link
-            href={`/artikel/${article.slug}`}
+            href={getArticleUrl(article)}
             target="_blank"
             className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-600 hover:underline"
             style={{ fontFamily: 'var(--font-display)' }}

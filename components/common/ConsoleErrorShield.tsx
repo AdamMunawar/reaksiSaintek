@@ -16,18 +16,43 @@ export default function ConsoleErrorShield() {
     const originalWarn = console.warn;
 
     console.error = (...args: any[]) => {
-      // Check if message contains sensitive system details or raw stacks
-      const str = args.map((a) => (typeof a === 'object' && a !== null ? (a.message || a.stack || JSON.stringify(a)) : String(a))).join(' ');
+      const str = args
+        .map((a) => (typeof a === 'object' && a !== null ? (a.message || a.stack || JSON.stringify(a)) : String(a)))
+        .join(' ');
 
+      // Check for 404
+      if (str.includes('404') || str.toLowerCase().includes('not found')) {
+        originalWarn.call(console, '[404] Resource Not Found');
+        return;
+      }
+
+      // Check for 500 or DB errors
       if (
+        str.includes('500') ||
         str.includes('PostgreSQL') ||
         str.includes('SQL') ||
-        str.includes('at ') ||
-        str.includes('forward-logs-shared') ||
-        str.includes('webpack-internal')
+        str.includes('Database') ||
+        str.includes('ECONNREFUSED')
       ) {
-        // Mask raw internal stack trace with sanitized message
-        originalWarn.call(console, '[LPM Reaksi System] Operasi client-side diproses dengan fallback aman.');
+        originalWarn.call(console, '[500] Service Request Fallback');
+        return;
+      }
+
+      // Suppress dev-mode hydration warnings and framework internals in DevTools
+      if (
+        str.includes('hydration') ||
+        str.includes('hydrated') ||
+        str.includes('forward-logs-shared') ||
+        str.includes('webpack-internal') ||
+        str.includes('validateDOMNesting') ||
+        str.includes('React will try to recreate this component')
+      ) {
+        return;
+      }
+
+      // If it has long stack trace, condense to simple error code
+      if (str.includes('at ') || str.length > 120) {
+        originalWarn.call(console, '[System Notice] Client state synced.');
         return;
       }
 
@@ -35,17 +60,36 @@ export default function ConsoleErrorShield() {
     };
 
     console.warn = (...args: any[]) => {
-      const str = args.map((a) => (typeof a === 'object' && a !== null ? (a.message || JSON.stringify(a)) : String(a))).join(' ');
-      if (str.includes('PostgreSQL') || str.includes('DATABASE_URL')) {
+      const str = args
+        .map((a) => (typeof a === 'object' && a !== null ? (a.message || JSON.stringify(a)) : String(a)))
+        .join(' ');
+
+      if (
+        str.includes('PostgreSQL') ||
+        str.includes('DATABASE_URL') ||
+        str.includes('Slow Query') ||
+        str.includes('forward-logs-shared') ||
+        str.includes('hydration') ||
+        str.includes('hydrated')
+      ) {
         return;
       }
+
+      if (str.includes('404')) {
+        originalWarn.call(console, '[404] Not Found');
+        return;
+      }
+
       originalWarn.apply(console, args);
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      // Prevent raw unhandled rejection from dumping stack to console
       if (event?.reason) {
         event.preventDefault?.();
+        const reasonStr = String(event.reason?.message || event.reason || '');
+        if (reasonStr.includes('404')) {
+          originalWarn.call(console, '[404] Unhandled Resource Not Found');
+        }
       }
     };
 

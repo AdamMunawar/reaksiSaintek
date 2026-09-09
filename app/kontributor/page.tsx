@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Loader2,
 } from 'lucide-react';
+import { getArticleUrl } from '@/lib/data';
 
 
 const STATUS_BADGES: Record<ArticleStatus, { label: string; bg: string; text: string }> = {
@@ -336,7 +337,7 @@ export default function ContributorDashboard() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {art.status === 'PUBLISHED' && (
                         <Link
-                          href={`/artikel/${art.slug}`}
+                          href={getArticleUrl(art)}
                           target="_blank"
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 hover:underline"
                           style={{ fontFamily: 'var(--font-display)' }}

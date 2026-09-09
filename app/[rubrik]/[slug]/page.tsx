@@ -1,12 +1,12 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import { query } from '@/backend/db/postgres';
-import { db } from '@/backend/db/repository';
 import { getArticleBySlug, getRelatedArticles, Article } from '@/lib/data';
-import ArticleClient from './ArticleClient';
+// Use absolute alias to avoid TypeScript resolver issues with [bracket] directories
+import ArticleViewCore from '@/components/article/ArticleViewCore';
 
 interface Props {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ rubrik: string; slug: string }>;
 }
 
 function getBaseUrl(): string {
@@ -16,15 +16,14 @@ function getBaseUrl(): string {
   return 'https://reaksisaintek.vercel.app';
 }
 
-const fetchArticleData = cache(async (slug: string) => {
+const fetchArticleData = cache(async (slug: string, rubrik: string) => {
   const decodedSlug = decodeURIComponent(slug);
 
-  // 1. Try PostgreSQL direct
   try {
     if (process.env.DATABASE_URL) {
       const res = await query(
-        'SELECT * FROM articles WHERE slug = $1 OR id = $1 OR slug = $2 LIMIT 1;',
-        [slug, decodedSlug]
+        'SELECT * FROM articles WHERE (slug = $1 OR id = $1 OR slug = $2) AND status = $3 LIMIT 1;',
+        [slug, decodedSlug, 'PUBLISHED']
       );
       if (res && res.rows.length > 0) {
         const r = res.rows[0];
@@ -50,14 +49,13 @@ const fetchArticleData = cache(async (slug: string) => {
     console.info('[404] Resource fallback');
   }
 
-  // 2. Fallback to repository
   const found = getArticleBySlug(decodedSlug) || getArticleBySlug(slug);
   return found || null;
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const article = await fetchArticleData(slug);
+  const { slug, rubrik } = await params;
+  const article = await fetchArticleData(slug, rubrik);
   const baseUrl = getBaseUrl();
 
   if (!article) {
@@ -69,19 +67,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = article.title;
   const description = (article.excerpt || 'Baca artikel dan liputan mendalam selengkapnya di LPM Reaksi.')
-    .replace(/<[^>]+>/g, '')
-    .trim()
-    .slice(0, 160);
+    .replace(/<[^>]+>/g, '').trim().slice(0, 160);
 
   let imageUrl = `${baseUrl}/api/og-image/${encodeURIComponent(article.slug || slug)}`;
-  const rawCover = article.thumbnail || '';
-  if (!rawCover) {
-    imageUrl = `${baseUrl}/images/reaksi.png`;
-  }
+  if (!article.thumbnail) imageUrl = `${baseUrl}/images/reaksi.png`;
 
-  const articleUrl = article.rubrik
-    ? `${baseUrl}/${article.rubrik}/${article.slug || slug}`
-    : `${baseUrl}/artikel/${article.slug || slug}`;
+  // Canonical URL uses rubrik-based path
+  const articleUrl = `${baseUrl}/${article.rubrik || rubrik}/${article.slug || slug}`;
 
   return {
     title: `${title} | LPM Reaksi`,
@@ -100,16 +92,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'article',
       publishedTime: article.publishedAt,
       authors: [article.author],
-      images: [
-        {
-          url: imageUrl,
-          secureUrl: imageUrl,
-          width: 1200,
-          height: 630,
-          type: 'image/jpeg',
-          alt: title,
-        },
-      ],
+      images: [{ url: imageUrl, secureUrl: imageUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -120,16 +103,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ArticlePage({ params }: Props) {
-  const { slug } = await params;
-  const article = await fetchArticleData(slug);
+export default async function RubrikArticlePage({ params }: Props) {
+  const { slug, rubrik } = await params;
+  const article = await fetchArticleData(slug, rubrik);
   const related = article ? getRelatedArticles(article, 3) : [];
 
   return (
-    <ArticleClient
+    <ArticleViewCore
       initialArticle={article}
       initialRelated={related}
       slug={slug}
+      rubrikContext={rubrik}
     />
   );
 }

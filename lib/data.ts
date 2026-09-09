@@ -174,3 +174,16 @@ export function timeAgo(dateStr?: string): string {
     return dateStr;
   }
 }
+
+/**
+ * Returns the canonical public URL for an article.
+ * Rubrik-based: /[rubrik]/[slug]   (preferred — better SEO)
+ * Fallback:     /artikel/[slug]
+ */
+export function getArticleUrl(article: { rubrik?: string | null; slug: string }): string {
+  if (article.rubrik && article.slug) {
+    return `/${article.rubrik}/${article.slug}`;
+  }
+  return `/artikel/${article.slug}`;
+}
+
