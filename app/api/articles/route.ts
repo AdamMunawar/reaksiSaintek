@@ -11,6 +11,11 @@ export async function GET(req: NextRequest) {
     const statusParam = searchParams.get('status');
     const rubrikParam = searchParams.get('rubrik');
     const searchParam = searchParams.get('search');
+    const includeContent = searchParams.get('includeContent') === 'true';
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10) || 100, 1), 200) : 100;
+    const offsetParam = searchParams.get('offset');
+    const offset = offsetParam ? Math.max(parseInt(offsetParam, 10) || 0, 0) : 0;
 
     // Server-side RBAC: Superadmin can ONLY query PUBLISHED articles
     // Server-side RBAC: Superadmin default query
@@ -19,7 +24,17 @@ export async function GET(req: NextRequest) {
     // 1. Try PostgreSQL
     try {
       if (process.env.DATABASE_URL) {
-        let sql = 'SELECT * FROM articles WHERE 1=1';
+        const baseCols = [
+          'id', 'slug', 'title', 'excerpt', 'cover_image', 'cover_caption',
+          'rubrik', 'author_id', 'author_name', 'author_role', 'status',
+          'tags', 'published_at', 'views', 'read_time', 'review_notes',
+          'created_at', 'updated_at'
+        ];
+        if (includeContent) {
+          baseCols.push('content');
+        }
+
+        let sql = `SELECT ${baseCols.join(', ')} FROM articles WHERE 1=1`;
         const params: any[] = [];
         let pIdx = 1;
 
@@ -37,7 +52,8 @@ export async function GET(req: NextRequest) {
           pIdx++;
         }
 
-        sql += ' ORDER BY COALESCE(published_at, created_at) DESC;';
+        sql += ` ORDER BY COALESCE(published_at, created_at) DESC LIMIT $${pIdx++} OFFSET $${pIdx++};`;
+        params.push(limit, offset);
 
         const res = await query(sql, params);
         if (res && res.rows) {
@@ -46,7 +62,7 @@ export async function GET(req: NextRequest) {
             slug: r.slug,
             title: r.title,
             excerpt: r.excerpt,
-            content: r.content,
+            ...(includeContent ? { content: r.content } : {}),
             coverImage: r.cover_image,
             cover_image: r.cover_image,
             coverCaption: r.cover_caption,
@@ -67,7 +83,14 @@ export async function GET(req: NextRequest) {
             createdAt: r.created_at,
             updatedAt: r.updated_at,
           }));
-          return NextResponse.json(mapped);
+
+          const headers: Record<string, string> = {};
+          if (effectiveStatus === 'PUBLISHED' && !searchParam) {
+            // Edge CDN caching: 30s fresh, 120s stale-while-revalidate
+            headers['Cache-Control'] = 'public, s-maxage=30, stale-while-revalidate=120';
+          }
+
+          return NextResponse.json(mapped, { headers });
         }
       }
     } catch (dbErr) {
@@ -81,7 +104,17 @@ export async function GET(req: NextRequest) {
       search: searchParam || undefined,
     });
 
-    return NextResponse.json(list);
+    const pagedList = list.slice(offset, offset + limit);
+    const mappedList = includeContent
+      ? pagedList
+      : pagedList.map(({ content, ...rest }: any) => rest);
+
+    const headers: Record<string, string> = {};
+    if (effectiveStatus === 'PUBLISHED' && !searchParam) {
+      headers['Cache-Control'] = 'public, s-maxage=30, stale-while-revalidate=120';
+    }
+
+    return NextResponse.json(mappedList, { headers });
   } catch (error: any) {
     console.error('Error fetching articles:', error);
     return NextResponse.json({ error: 'Gagal mengambil data artikel.' }, { status: 500 });

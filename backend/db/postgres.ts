@@ -17,9 +17,9 @@ export function getPool(): Pool | null {
     pool = new Pool({
       connectionString,
       ssl: isLocalhost ? false : { rejectUnauthorized: false },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 5, // Serverless-safe connection pool limit
+      idleTimeoutMillis: 10000, // Return idle connections after 10s
+      connectionTimeoutMillis: 5000, // Fast connection timeout failover
     });
 
     pool.on('error', (err) => {

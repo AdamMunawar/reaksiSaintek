@@ -189,6 +189,19 @@ function SearchContent() {
     if (q !== null) setQuery(q);
     const r = searchParams.get('rubrik') as Rubrik | null;
     if (r !== null) setSelectedRubrik(r);
+
+    // If search term is present, also trigger server-side full-text search
+    if (q && q.trim()) {
+      fetch(`/api/articles?status=PUBLISHED&search=${encodeURIComponent(q.trim())}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            db.syncArticlesFromRemote(data);
+            setAllArticles(getAllActiveArticles());
+          }
+        })
+        .catch(() => {});
+    }
   }, [searchParams]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {

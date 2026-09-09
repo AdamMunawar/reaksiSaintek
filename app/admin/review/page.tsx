@@ -45,8 +45,8 @@ export default function ReviewHubPage() {
       setSelectedArticle(null);
     }
 
-    // Live sync dari database server
-    fetch('/api/articles?status=PENDING_REVIEW')
+    // Live sync dari database server (dengan konten penuh untuk kurasi redaksi)
+    fetch('/api/articles?status=PENDING_REVIEW&includeContent=true')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data)) {

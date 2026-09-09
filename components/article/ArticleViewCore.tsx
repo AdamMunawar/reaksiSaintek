@@ -141,13 +141,15 @@ export default function ArticleViewCore({
       }
       setLoading(false);
 
-      // Increment view count once after article is loaded
+      // Increment view count once after article is loaded (2s delay to filter bots/bounces and reduce lock contention)
       if (!viewIncrementedRef.current && article.id) {
         viewIncrementedRef.current = true;
-        fetch(`/api/articles/${encodeURIComponent(article.id)}/views`, { method: 'PATCH' })
-          .then((r) => r.ok ? r.json() : null)
-          .then((data) => { if (data?.views != null) setViewCount(data.views); })
-          .catch(() => {});
+        setTimeout(() => {
+          fetch(`/api/articles/${encodeURIComponent(article.id)}/views`, { method: 'PATCH' })
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => { if (data?.views != null) setViewCount(data.views); })
+            .catch(() => {});
+        }, 2000);
       }
       return;
     }
@@ -182,13 +184,15 @@ export default function ArticleViewCore({
             setRubrikMeta({ label: dynRubrik.name, color: dynRubrik.color });
           }
 
-          // Increment view count once after article is loaded
+          // Increment view count once after article is loaded (2s delay)
           if (!viewIncrementedRef.current) {
             viewIncrementedRef.current = true;
-            fetch(`/api/articles/${encodeURIComponent(mapped.id)}/views`, { method: 'PATCH' })
-              .then((r) => r.ok ? r.json() : null)
-              .then((data) => { if (data?.views != null) setViewCount(data.views); })
-              .catch(() => {});
+            setTimeout(() => {
+              fetch(`/api/articles/${encodeURIComponent(mapped.id)}/views`, { method: 'PATCH' })
+                .then((r) => r.ok ? r.json() : null)
+                .then((data) => { if (data?.views != null) setViewCount(data.views); })
+                .catch(() => {});
+            }, 2000);
           }
         }
       })
