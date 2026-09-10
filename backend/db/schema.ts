@@ -51,6 +51,7 @@ export interface Article {
   coverImage: string;
   coverCaption?: string;
   rubrik: string;
+  subRubrik?: string;
   authorId: string;
   authorName: string;
   authorRole: UserRole;
@@ -132,6 +133,7 @@ export interface RubrikItem {
   color: string;
   emoji: string;
   order: number;
+  subRubriks?: string[];
 }
 
 export interface MediaPartnerPackage {

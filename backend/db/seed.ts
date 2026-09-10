@@ -94,7 +94,7 @@ export const SEED_RUBRIKS: RubrikItem[] = [
   {
     id: 'rubrik-2',
     slug: 'saintek',
-    name: 'Saintek Update',
+    name: 'Saintek',
     description: 'Perkembangan sains, teknologi, dan inovasi terkini',
     color: '#0891B2',
     emoji: '',

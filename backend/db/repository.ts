@@ -170,6 +170,7 @@ export const db = {
       content,
       coverImage: article.coverImage || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80',
       rubrik: article.rubrik || 'kabar-kampus',
+      subRubrik: article.subRubrik,
       authorId: article.authorId || 'user-superadmin',
       authorName: article.authorName || 'Redaksi LPM Reaksi',
       authorRole: (article.authorRole as UserRole) || 'superadmin',
@@ -496,6 +497,7 @@ export const db = {
           color: rubrik.color ?? all[idx].color,
           emoji: rubrik.emoji ?? all[idx].emoji,
           order: rubrik.order ?? all[idx].order,
+          subRubriks: rubrik.subRubriks !== undefined ? rubrik.subRubriks : (all[idx].subRubriks || []),
         };
         all[idx] = updated;
         memoryStore.rubriks = all;
@@ -513,6 +515,7 @@ export const db = {
       color: rubrik.color || '#2563EB',
       emoji: rubrik.emoji || '',
       order: rubrik.order ?? nextOrder,
+      subRubriks: rubrik.subRubriks || [],
     };
     all.push(newItem);
     memoryStore.rubriks = all;

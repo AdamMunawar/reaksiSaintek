@@ -52,6 +52,8 @@ export default function AdminRubrikPage() {
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#2563EB');
   const [isAutoSlug, setIsAutoSlug] = useState(true);
+  const [subRubriks, setSubRubriks] = useState<string[]>([]);
+  const [newSubInput, setNewSubInput] = useState('');
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -63,6 +65,30 @@ export default function AdminRubrikPage() {
     const list = db.getRubriks();
     setRubriks(list);
     setArticles(db.getArticles());
+
+    fetch('/api/rubriks')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((d: any) => ({
+            id: d.id,
+            slug: d.slug,
+            name: d.name,
+            description: d.description || '',
+            color: d.color || '#2563EB',
+            emoji: d.emoji || '',
+            order: d.sort_order ?? d.order ?? 1,
+            subRubriks: Array.isArray(d.sub_rubriks)
+              ? d.sub_rubriks
+              : Array.isArray(d.subRubriks)
+              ? d.subRubriks
+              : [],
+          }));
+          setRubriks(mapped);
+          mapped.forEach((m: any) => db.saveRubrik(m));
+        }
+      })
+      .catch(() => {});
   };
 
   const handleOpenAdd = () => {
@@ -71,6 +97,8 @@ export default function AdminRubrikPage() {
     setSlug('');
     setDescription('');
     setColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]);
+    setSubRubriks([]);
+    setNewSubInput('');
     setIsAutoSlug(true);
     setIsModalOpen(true);
   };
@@ -81,8 +109,24 @@ export default function AdminRubrikPage() {
     setSlug(item.slug);
     setDescription(item.description);
     setColor(item.color);
+    setSubRubriks(item.subRubriks || []);
+    setNewSubInput('');
     setIsAutoSlug(false);
     setIsModalOpen(true);
+  };
+
+  const handleAddSubRubrik = () => {
+    const trimmed = newSubInput.trim();
+    if (!trimmed) return;
+    if (subRubriks.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    setSubRubriks([...subRubriks, trimmed]);
+    setNewSubInput('');
+  };
+
+  const handleRemoveSubRubrik = (indexToRemove: number) => {
+    setSubRubriks(subRubriks.filter((_, i) => i !== indexToRemove));
   };
 
   const handleNameChange = (val: string) => {
@@ -116,14 +160,23 @@ export default function AdminRubrikPage() {
       return;
     }
 
-    db.saveRubrik({
+    const payload = {
       id: editId || undefined,
       name: name.trim(),
       slug: slug.trim().toLowerCase(),
       description: description.trim(),
       color,
       emoji: '',
-    });
+      subRubriks,
+    };
+
+    db.saveRubrik(payload);
+
+    fetch('/api/rubriks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch((err) => console.warn('Sync rubrik to Postgres error:', err));
 
     setNotification({
       type: 'success',
@@ -270,6 +323,7 @@ export default function AdminRubrikPage() {
               <tr style={{ backgroundColor: 'var(--color-wall)', borderBottom: '1px solid var(--color-line)' }}>
                 <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] w-14 text-center">Urutan</th>
                 <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Rubrik &amp; Tampilan</th>
+                <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Breakdown Sub-Rubrik</th>
                 <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Slug URL</th>
                 <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px]">Deskripsi</th>
                 <th className="py-3 px-4 font-bold uppercase tracking-wider text-[10px] text-center">Artikel</th>
@@ -318,6 +372,29 @@ export default function AdminRubrikPage() {
                           {r.name}
                         </span>
                       </div>
+                    </td>
+
+                    {/* Breakdown Sub-Rubrik */}
+                    <td className="py-3 px-4">
+                      {r.subRubriks && r.subRubriks.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {r.subRubriks.map((sub, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="inline-block px-2 py-0.5 text-[10px] font-bold rounded"
+                              style={{
+                                backgroundColor: 'var(--color-wall)',
+                                border: '1px solid var(--color-line)',
+                                color: 'var(--color-foreground)',
+                              }}
+                            >
+                              {sub}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-[var(--color-muted)]">—</span>
+                      )}
                     </td>
 
                     {/* Slug */}
@@ -541,6 +618,78 @@ export default function AdminRubrikPage() {
                     border: '1px solid var(--color-line)',
                   }}
                 />
+              </div>
+
+              {/* Breakdown Sub-Rubrik (Opsional) */}
+              <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--color-line)' }}>
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold uppercase tracking-wider text-[11px]" style={{ fontFamily: 'var(--font-display)' }}>
+                    Breakdown Sub-Rubrik (Opsional)
+                  </label>
+                  <span className="text-[10px] text-[var(--color-muted)] font-mono">
+                    {subRubriks.length} sub-rubrik
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--color-muted)] leading-relaxed">
+                  Tambahkan sub-kategori/breakdown di bawah rubrik ini (misal: untuk rubrik <em>Kabar</em>, tambahkan <em>Kabar Kampus</em>, <em>Kabar Daerah</em>, dll). Jika tidak ada breakdown, biarkan kosong.
+                </p>
+
+                {/* Input + Button */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSubInput}
+                    onChange={(e) => setNewSubInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSubRubrik();
+                      }
+                    }}
+                    placeholder="Ketik nama sub-rubrik lalu tekan Tambah / Enter..."
+                    className="flex-1 px-3 py-2 text-xs focus:outline-none"
+                    style={{
+                      backgroundColor: 'var(--color-wall)',
+                      color: 'var(--color-foreground)',
+                      border: '1px solid var(--color-line)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSubRubrik}
+                    className="px-3.5 py-2 text-xs font-bold uppercase tracking-wider rounded-none text-white hover:opacity-90 transition-opacity flex-shrink-0"
+                    style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+                  >
+                    + Tambah
+                  </button>
+                </div>
+
+                {/* Chips List */}
+                {subRubriks.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {subRubriks.map((sub, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded font-medium border"
+                        style={{
+                          backgroundColor: 'var(--color-wall)',
+                          borderColor: 'var(--color-line)',
+                          color: 'var(--color-foreground)',
+                        }}
+                      >
+                        <span>{sub}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSubRubrik(idx)}
+                          className="text-red-500 hover:text-red-700 font-bold ml-1 text-xs"
+                          title="Hapus sub-rubrik"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Modal Actions */}

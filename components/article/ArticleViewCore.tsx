@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ArticleCard from '@/components/cards/ArticleCard';
@@ -84,6 +85,7 @@ export default function ArticleViewCore({
   const [article, setArticle] = useState<Article | null>(initialArticle);
   const [related, setRelated] = useState<Article[]>(initialRelated);
   const [loading, setLoading] = useState(!initialArticle);
+  const router = useRouter();
 
   // Initialize rubrikMeta immediately so SSR matches Client render exactly
   const initialMeta = (() => {
@@ -206,6 +208,48 @@ export default function ArticleViewCore({
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  // ── Fetch related articles if empty (client-side fallback & hydration) ───
+  useEffect(() => {
+    if (!article) return;
+    if (related.length > 0) return;
+
+    fetch('/api/articles?status=PUBLISHED&limit=12')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          const pool = items.filter(
+            (item: any) => item.id !== article.id && item.slug !== article.slug
+          );
+          const sameRubrik = pool.filter((item: any) => item.rubrik === article.rubrik);
+          const others = pool.filter((item: any) => item.rubrik !== article.rubrik);
+          const combined = [...sameRubrik, ...others].slice(0, 3);
+          if (combined.length > 0) {
+            setRelated(
+              combined.map((r: any) => ({
+                id: r.id,
+                slug: r.slug,
+                title: r.title,
+                excerpt: r.excerpt || '',
+                content: r.content || '',
+                author: r.authorName || r.author_name || 'Redaksi LPM Reaksi',
+                authorAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.authorName || r.author_name || 'Redaksi')}&background=1d4ed8&color=fff`,
+                rubrik: r.rubrik,
+                publishedAt: r.publishedAt || r.published_at || r.createdAt || new Date().toISOString(),
+                readTime: r.readTime || r.read_time || 3,
+                thumbnail: r.coverImage || r.cover_image || '',
+                coverCaption: r.coverCaption || r.cover_caption || '',
+                tags: Array.isArray(r.tags) ? r.tags : [],
+                views: r.views || 0,
+                createdAt: r.createdAt || r.created_at,
+                updatedAt: r.updatedAt || r.updated_at,
+              }))
+            );
+          }
+        }
+      })
+      .catch(() => {});
+  }, [article, related.length]);
 
   // ── Copy link handler ──────────────────────────────────────────────────────
   const handleCopyLink = useCallback(() => {
@@ -360,6 +404,14 @@ export default function ArticleViewCore({
 
   const rubrikUrl = article.rubrik ? `/${article.rubrik}` : '/';
 
+  const handleGoBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(rubrikUrl || '/');
+    }
+  }, [router, rubrikUrl]);
+
   const pubTime = article?.publishedAt ? new Date(article.publishedAt).getTime() : 0;
   const updateTime = article?.updatedAt ? new Date(article.updatedAt).getTime() : 0;
   // Ditandai disunting jika ada updatedAt dan selisihnya minimal 1 menit setelah tanggal publish
@@ -380,14 +432,33 @@ export default function ArticleViewCore({
       {/* ── Main Article ── */}
       <main className={`flex-1 mx-auto px-4 sm:px-8 py-10 sm:py-16 w-full transition-all duration-300 ${COL_WIDTHS[colWidth]}`} suppressHydrationWarning>
 
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs mb-6" style={{ color: 'var(--color-muted)' }}>
-          <Link href="/" className="hover:underline">Beranda</Link>
-          <ChevronRight size={12} />
-          <Link href={rubrikUrl} className="hover:underline capitalize" style={{ color: rubrikMeta.color }} suppressHydrationWarning>
-            {rubrikMeta.label}
-          </Link>
-        </nav>
+        {/* Top Navigation: Tombol Kembali & Breadcrumb */}
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <button
+            type="button"
+            onClick={handleGoBack}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] cursor-pointer"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-line)',
+              color: 'var(--color-foreground)',
+              fontFamily: 'var(--font-display)',
+            }}
+            aria-label="Kembali ke halaman sebelumnya"
+          >
+            <ArrowLeft size={14} />
+            <span>Kembali</span>
+          </button>
+
+          {/* Breadcrumb */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-muted)' }}>
+            <Link href="/" className="hover:underline">Beranda</Link>
+            <ChevronRight size={12} />
+            <Link href={rubrikUrl} className="hover:underline capitalize" style={{ color: rubrikMeta.color }} suppressHydrationWarning>
+              {rubrikMeta.label}
+            </Link>
+          </nav>
+        </div>
 
         {/* Category Badge */}
         <span
@@ -620,43 +691,91 @@ export default function ArticleViewCore({
           </div>
         )}
 
-        {/* Copy link (bottom) */}
-        <div className="mt-8 flex items-center gap-3 py-4" style={{ borderTop: '1px solid var(--color-line)' }}>
-          <button
-            onClick={handleCopyLink}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase border rounded transition-all"
-            style={{
-              borderColor: copied ? 'var(--color-accent)' : 'var(--color-line)',
-              backgroundColor: copied ? 'var(--color-accent-pale)' : 'var(--color-surface)',
-              color: copied ? 'var(--color-accent)' : 'var(--color-muted)',
-              fontFamily: 'var(--font-display)',
-            }}
-            aria-label="Salin tautan artikel ini"
-          >
-            {copied ? <Check size={13} /> : <Link2 size={13} />}
-            {copied ? 'Tautan Disalin!' : 'Salin Tautan Artikel'}
-          </button>
+        {/* Bottom Actions: Kembali, Copy link, Views */}
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 py-4" style={{ borderTop: '1px solid var(--color-line)' }}>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleGoBack}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold uppercase border rounded transition-all hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] cursor-pointer"
+              style={{
+                borderColor: 'var(--color-line)',
+                backgroundColor: 'var(--color-surface)',
+                color: 'var(--color-muted)',
+                fontFamily: 'var(--font-display)',
+              }}
+              aria-label="Kembali ke halaman sebelumnya"
+            >
+              <ArrowLeft size={13} />
+              <span>Kembali</span>
+            </button>
+
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase border rounded transition-all cursor-pointer"
+              style={{
+                borderColor: copied ? 'var(--color-accent)' : 'var(--color-line)',
+                backgroundColor: copied ? 'var(--color-accent-pale)' : 'var(--color-surface)',
+                color: copied ? 'var(--color-accent)' : 'var(--color-muted)',
+                fontFamily: 'var(--font-display)',
+              }}
+              aria-label="Salin tautan artikel ini"
+            >
+              {copied ? <Check size={13} /> : <Link2 size={13} />}
+              {copied ? 'Tautan Disalin!' : 'Salin Tautan Artikel'}
+            </button>
+          </div>
+
           <span className="text-xs flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }} suppressHydrationWarning>
             <Eye size={13} />
             <span suppressHydrationWarning>{viewCount.toLocaleString('id-ID')} kali dibaca</span>
           </span>
         </div>
 
-        {/* Related Articles */}
+        {/* Related & Recommended Articles */}
         {related.length > 0 && (
-          <div className="mt-16 pt-10" style={{ borderTop: '2px solid var(--color-keyline)' }}>
-            <h2
-              className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight mb-8"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
+          <section
+            aria-labelledby="heading-related-articles"
+            className="mt-16 pt-10"
+            style={{ borderTop: '2px solid var(--color-keyline)' }}
+          >
+            <div
+              className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8 pb-4"
+              style={{ borderBottom: '1px solid var(--color-line)' }}
             >
-              Artikel Terkait
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <span
+                  className="text-[11px] font-extrabold uppercase tracking-widest block mb-1.5"
+                  style={{ color: rubrikMeta.color || 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+                >
+                  Rekomendasi Bacaan
+                </span>
+                <h2
+                  id="heading-related-articles"
+                  className="text-xl sm:text-2xl font-extrabold uppercase tracking-tight"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
+                >
+                  Artikel Terkait &amp; Lainnya
+                </h2>
+              </div>
+              {rubrikMeta?.label && (
+                <Link
+                  href={rubrikUrl}
+                  className="text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center gap-1 group self-start sm:self-end"
+                  style={{ color: 'var(--color-muted)' }}
+                >
+                  <span className="group-hover:text-[var(--color-accent)] transition-colors">
+                    Lihat Berita {rubrikMeta.label} Lainnya
+                  </span>
+                  <ChevronRight size={14} className="group-hover:translate-x-0.5 group-hover:text-[var(--color-accent)] transition-all" />
+                </Link>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {related.map((a) => (
-                <ArticleCard key={a.id} article={a} />
+                <ArticleCard key={a.id || a.slug} article={a} />
               ))}
             </div>
-          </div>
+          </section>
         )}
       </main>
 
@@ -911,6 +1030,23 @@ export default function ArticleViewCore({
           </button>
         </div>
       </aside>
+
+      {/* ── Mobile Floating Back Button (Bottom-Left, Easy Thumb Navigation) ── */}
+      <button
+        id="btn-mobile-floating-back"
+        onClick={handleGoBack}
+        aria-label="Kembali ke halaman sebelumnya"
+        title="Kembali"
+        className="fixed bottom-6 left-6 z-50 sm:hidden w-11 h-11 flex items-center justify-center rounded-full border-2 shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
+        style={{
+          backgroundColor: 'var(--color-surface)',
+          borderColor: 'var(--color-line)',
+          color: 'var(--color-foreground)',
+          boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.18)',
+        }}
+      >
+        <ArrowLeft size={18} />
+      </button>
     </div>
   );
 }

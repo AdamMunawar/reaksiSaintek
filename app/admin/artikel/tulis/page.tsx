@@ -33,7 +33,8 @@ export default function WriteArticlePage() {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [rubrik, setRubrik] = useState<string>('kabar-kampus');
-  const [availableRubriks, setAvailableRubriks] = useState<Array<{ slug: string; name: string }>>([]);
+  const [subRubrik, setSubRubrik] = useState<string>('');
+  const [availableRubriks, setAvailableRubriks] = useState<Array<{ slug: string; name: string; subRubriks?: string[] }>>([]);
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState('');
@@ -49,16 +50,26 @@ export default function WriteArticlePage() {
   useEffect(() => {
     const list = db.getRubriks();
     if (list && list.length > 0) {
-      setAvailableRubriks(list.map((r) => ({ slug: r.slug, name: r.name })));
+      setAvailableRubriks(list.map((r) => ({ slug: r.slug, name: r.name, subRubriks: r.subRubriks || [] })));
       setRubrik(list[0].slug);
     } else {
       setAvailableRubriks(
         Object.entries(RUBRIK_META).map(([key, meta]) => ({
           slug: key,
           name: meta.label,
+          subRubriks: [],
         }))
       );
     }
+
+    fetch('/api/rubriks')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAvailableRubriks(data.map((r: any) => ({ slug: r.slug, name: r.name, subRubriks: r.subRubriks || [] })));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleTitleChange = (val: string) => {
@@ -100,6 +111,7 @@ export default function WriteArticlePage() {
       title: title.trim(),
       slug: slug.trim() || undefined,
       rubrik,
+      subRubrik: subRubrik.trim() || undefined,
       excerpt: extractCleanExcerpt('', content, 160),
       content: content.trim(),
       coverImage: coverImage.trim(),
@@ -427,7 +439,10 @@ export default function WriteArticlePage() {
               </label>
               <select
                 value={rubrik}
-                onChange={(e) => setRubrik(e.target.value)}
+                onChange={(e) => {
+                  setRubrik(e.target.value);
+                  setSubRubrik('');
+                }}
                 className="w-full px-3 py-2 text-xs font-bold uppercase focus:outline-none"
                 style={{
                   backgroundColor: 'var(--color-wall)',
@@ -443,6 +458,37 @@ export default function WriteArticlePage() {
                 ))}
               </select>
             </div>
+
+            {(() => {
+              const selected = availableRubriks.find((r) => r.slug === rubrik);
+              if (selected && selected.subRubriks && selected.subRubriks.length > 0) {
+                return (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                      Sub-Rubrik / Breakdown ({selected.name})
+                    </label>
+                    <select
+                      value={subRubrik}
+                      onChange={(e) => setSubRubrik(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-semibold focus:outline-none"
+                      style={{
+                        backgroundColor: 'var(--color-wall)',
+                        color: 'var(--color-foreground)',
+                        border: '1px solid var(--color-line)',
+                      }}
+                    >
+                      <option value="">-- Tanpa Sub-Rubrik (Utama) --</option>
+                      {selected.subRubriks.map((sub) => (
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ fontFamily: 'var(--font-display)' }}>

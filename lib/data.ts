@@ -46,6 +46,7 @@ export interface Article {
   author: string;
   authorAvatar: string;
   rubrik: Rubrik;
+  subRubrik?: string;
   publishedAt: string;
   readTime: number; // menit
   thumbnail: string;
@@ -95,6 +96,7 @@ export function getAllActiveArticles(): Article[] {
           author: a.authorName,
           authorAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(a.authorName)}&background=1d4ed8&color=fff`,
           rubrik: a.rubrik as Rubrik,
+          subRubrik: a.subRubrik,
           publishedAt: a.publishedAt || a.createdAt,
           readTime: a.readTime || 3,
           thumbnail: a.coverImage,
@@ -130,11 +132,14 @@ export function getTrendingArticles(limit = 5): Article[] {
   return [...all].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, limit);
 }
 
-export function getRelatedArticles(article: Article, limit = 4): Article[] {
-  const all = getAllActiveArticles();
-  return all
-    .filter((a) => a.id !== article.id && (a.rubrik === article.rubrik || a.tags?.some((t) => article.tags?.includes(t))))
-    .slice(0, limit);
+export function getRelatedArticles(article: Article, limit = 3): Article[] {
+  const all = getAllActiveArticles().filter((a) => a.id !== article.id && a.slug !== article.slug);
+  const related = all.filter((a) => a.rubrik === article.rubrik || a.tags?.some((t) => article.tags?.includes(t)));
+  if (related.length >= limit) {
+    return related.slice(0, limit);
+  }
+  const others = all.filter((a) => !related.some((r) => r.id === a.id));
+  return [...related, ...others].slice(0, limit);
 }
 
 export function getArticleBySlug(slug: string): Article | undefined {
@@ -155,6 +160,7 @@ export function getArticleBySlug(slug: string): Article | undefined {
         author: raw.authorName,
         authorAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.authorName)}&background=1d4ed8&color=fff`,
         rubrik: raw.rubrik as Rubrik,
+        subRubrik: raw.subRubrik,
         publishedAt: raw.publishedAt || raw.createdAt,
         readTime: raw.readTime || 3,
         thumbnail: raw.coverImage,

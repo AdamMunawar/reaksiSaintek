@@ -250,7 +250,7 @@
 
 .ticker-track {
   display: flex;
-  animation: ticker-scroll 28s linear infinite;
+  animation: ticker-scroll 32s linear infinite;
 }
 .ticker-track:hover { animation-play-state: paused; }
 

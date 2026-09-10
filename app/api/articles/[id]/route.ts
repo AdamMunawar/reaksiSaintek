@@ -23,6 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           coverCaption: r.cover_caption,
           cover_caption: r.cover_caption,
           rubrik: r.rubrik,
+          subRubrik: r.sub_rubrik || r.subRubrik,
           authorId: r.author_id,
           authorName: r.author_name,
           author_name: r.author_name,
@@ -62,7 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
   try {
     const body = await req.json();
-    const { title, slug, rubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags, reviewNotes } = body;
+    const { title, slug, rubrik, subRubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags, reviewNotes } = body;
 
     // Only Pemred, Redaktur, and Superadmin can publish or update status to PUBLISHED
     let targetStatus = status;
@@ -77,28 +78,31 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // 1. Try PostgreSQL
     try {
       if (process.env.DATABASE_URL) {
+        await query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS sub_rubrik TEXT;`).catch(() => {});
         const publishedAtClause = status === 'PUBLISHED' ? ', published_at = COALESCE(published_at, CURRENT_TIMESTAMP)' : '';
         const res = await query(
           `UPDATE articles
            SET title = COALESCE($1, title),
                slug = COALESCE($2, slug),
                rubrik = COALESCE($3, rubrik),
-               excerpt = COALESCE($4, excerpt),
-               content = COALESCE($5, content),
-               cover_image = COALESCE($6, cover_image),
-               cover_caption = COALESCE($7, cover_caption),
-               author_name = COALESCE($8, author_name),
-               status = COALESCE($9, status),
-               tags = COALESCE($10, tags),
-               review_notes = COALESCE($11, review_notes),
+               sub_rubrik = COALESCE($4, sub_rubrik),
+               excerpt = COALESCE($5, excerpt),
+               content = COALESCE($6, content),
+               cover_image = COALESCE($7, cover_image),
+               cover_caption = COALESCE($8, cover_caption),
+               author_name = COALESCE($9, author_name),
+               status = COALESCE($10, status),
+               tags = COALESCE($11, tags),
+               review_notes = COALESCE($12, review_notes),
                updated_at = CURRENT_TIMESTAMP
                ${publishedAtClause}
-           WHERE id = $12 OR slug = $12
+           WHERE id = $13 OR slug = $13
            RETURNING *;`,
           [
             title,
             slug,
             rubrik,
+            subRubrik !== undefined ? (subRubrik || null) : null,
             sanitizedExcerpt,
             sanitizedContent,
             coverImage,
@@ -123,6 +127,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             cover_image: r.cover_image,
             coverCaption: r.cover_caption,
             rubrik: r.rubrik,
+            subRubrik: r.sub_rubrik || subRubrik,
             authorId: r.author_id,
             authorName: r.author_name,
             authorRole: r.author_role,
@@ -150,6 +155,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       title,
       slug,
       rubrik,
+      subRubrik,
       excerpt: sanitizedExcerpt,
       content: sanitizedContent,
       coverImage,

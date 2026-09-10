@@ -24,17 +24,7 @@ export async function GET(req: NextRequest) {
     // 1. Try PostgreSQL
     try {
       if (process.env.DATABASE_URL) {
-        const baseCols = [
-          'id', 'slug', 'title', 'excerpt', 'cover_image', 'cover_caption',
-          'rubrik', 'author_id', 'author_name', 'author_role', 'status',
-          'tags', 'published_at', 'views', 'read_time', 'review_notes',
-          'created_at', 'updated_at'
-        ];
-        if (includeContent) {
-          baseCols.push('content');
-        }
-
-        let sql = `SELECT ${baseCols.join(', ')} FROM articles WHERE 1=1`;
+        let sql = `SELECT * FROM articles WHERE 1=1`;
         const params: any[] = [];
         let pIdx = 1;
 
@@ -68,6 +58,7 @@ export async function GET(req: NextRequest) {
             coverCaption: r.cover_caption,
             cover_caption: r.cover_caption,
             rubrik: r.rubrik,
+            subRubrik: r.sub_rubrik || r.subRubrik,
             authorId: r.author_id,
             authorName: r.author_name,
             author_name: r.author_name,
@@ -129,7 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, slug, rubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags } = body;
+    const { title, slug, rubrik, subRubrik, excerpt, content, coverImage, coverCaption, authorName, status, tags } = body;
 
     if (!title || !content) {
       return NextResponse.json({ error: 'Judul dan konten artikel wajib diisi.' }, { status: 400 });
@@ -150,6 +141,7 @@ export async function POST(req: NextRequest) {
       title: title.trim(),
       slug: slug ? slug.trim() : undefined,
       rubrik: rubrik || 'kabar-kampus',
+      subRubrik: subRubrik ? subRubrik.trim() : undefined,
       excerpt: sanitizedExcerpt,
       content: sanitizedContent,
       coverImage: coverImage || '',
@@ -164,13 +156,14 @@ export async function POST(req: NextRequest) {
     // 1. Try PostgreSQL
     try {
       if (process.env.DATABASE_URL) {
+        await query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS sub_rubrik TEXT;`).catch(() => {});
         const id = body.id || `art-${Date.now()}`;
         const autoSlug = articleData.slug || articleData.title.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
         const publishedAt = articleData.status === 'PUBLISHED' ? new Date().toISOString() : null;
 
         const res = await query(
-          `INSERT INTO articles (id, slug, title, excerpt, content, cover_image, cover_caption, rubrik, author_id, author_name, author_role, status, tags, published_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          `INSERT INTO articles (id, slug, title, excerpt, content, cover_image, cover_caption, rubrik, sub_rubrik, author_id, author_name, author_role, status, tags, published_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
            ON CONFLICT (id) DO UPDATE
            SET title = EXCLUDED.title,
                slug = EXCLUDED.slug,
@@ -179,6 +172,7 @@ export async function POST(req: NextRequest) {
                cover_image = EXCLUDED.cover_image,
                cover_caption = EXCLUDED.cover_caption,
                rubrik = EXCLUDED.rubrik,
+               sub_rubrik = EXCLUDED.sub_rubrik,
                status = EXCLUDED.status,
                tags = EXCLUDED.tags,
                published_at = EXCLUDED.published_at,
@@ -193,6 +187,7 @@ export async function POST(req: NextRequest) {
             articleData.coverImage,
             articleData.coverCaption,
             articleData.rubrik,
+            articleData.subRubrik || null,
             articleData.authorId || null,
             articleData.authorName,
             articleData.authorRole,
@@ -214,6 +209,7 @@ export async function POST(req: NextRequest) {
             cover_image: r.cover_image,
             coverCaption: r.cover_caption,
             rubrik: r.rubrik,
+            subRubrik: r.sub_rubrik || articleData.subRubrik,
             authorId: r.author_id,
             authorName: r.author_name,
             authorRole: r.author_role,
@@ -222,15 +218,16 @@ export async function POST(req: NextRequest) {
             publishedAt: r.published_at,
             views: r.views || 0,
             readTime: r.read_time || 3,
+            reviewNotes: r.review_notes,
             createdAt: r.created_at,
             updatedAt: r.updated_at,
           };
-          db.saveArticle(mapped as any);
+          db.saveArticle(mapped);
           return NextResponse.json(mapped, { status: 201 });
         }
       }
-    } catch (dbErr) {
-      console.warn('PostgreSQL insert error, fallback to repository:', dbErr);
+    } catch (pgError) {
+      console.warn('PostgreSQL insert error, fallback to repository:', pgError);
     }
 
     // 2. Fallback to repository

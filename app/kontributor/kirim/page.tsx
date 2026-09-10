@@ -48,7 +48,8 @@ function ContributorFormContent() {
   // Article details
   const [title, setTitle] = useState('');
   const [rubrik, setRubrik] = useState<string>('opini');
-  const [availableRubriks, setAvailableRubriks] = useState<Array<{ slug: string; name: string; description: string }>>([]);
+  const [subRubrik, setSubRubrik] = useState<string>('');
+  const [availableRubriks, setAvailableRubriks] = useState<Array<{ slug: string; name: string; description: string; subRubriks?: string[] }>>([]);
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState('');
@@ -64,7 +65,7 @@ function ContributorFormContent() {
   useEffect(() => {
     const list = db.getRubriks();
     if (list && list.length > 0) {
-      setAvailableRubriks(list.map((r) => ({ slug: r.slug, name: r.name, description: r.description })));
+      setAvailableRubriks(list.map((r) => ({ slug: r.slug, name: r.name, description: r.description, subRubriks: r.subRubriks || [] })));
       if (!editId) {
         setRubrik(list[0].slug);
       }
@@ -74,9 +75,19 @@ function ContributorFormContent() {
           slug: key,
           name: meta.label,
           description: meta.description,
+          subRubriks: [],
         }))
       );
     }
+
+    fetch('/api/rubriks')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAvailableRubriks(data.map((r: any) => ({ slug: r.slug, name: r.name, description: r.description, subRubriks: r.subRubriks || [] })));
+        }
+      })
+      .catch(() => {});
   }, [editId]);
 
   useEffect(() => {
@@ -86,6 +97,7 @@ function ContributorFormContent() {
         setArticleDetail(existing);
         setTitle(existing.title);
         setRubrik(existing.rubrik);
+        if (existing.subRubrik) setSubRubrik(existing.subRubrik);
         setExcerpt(existing.excerpt);
         setContent(existing.content);
         setCoverImage(existing.coverImage);
@@ -151,6 +163,7 @@ function ContributorFormContent() {
       id: editId || undefined,
       title: title.trim(),
       rubrik,
+      subRubrik: subRubrik ? subRubrik.trim() : undefined,
       excerpt: excerpt.trim() || content.slice(0, 160) + '...',
       content: content.trim(),
       coverImage: coverImage.trim(),
@@ -545,7 +558,10 @@ function ContributorFormContent() {
                   </label>
                   <select
                     value={rubrik}
-                    onChange={(e) => setRubrik(e.target.value)}
+                    onChange={(e) => {
+                      setRubrik(e.target.value);
+                      setSubRubrik('');
+                    }}
                     className="w-full px-3 py-2 text-xs font-bold uppercase focus:outline-none"
                     style={{
                       backgroundColor: 'var(--color-wall)',
@@ -561,6 +577,37 @@ function ContributorFormContent() {
                     ))}
                   </select>
                 </div>
+
+                {(() => {
+                  const selected = availableRubriks.find((r) => r.slug === rubrik);
+                  if (selected && selected.subRubriks && selected.subRubriks.length > 0) {
+                    return (
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                          Sub-Rubrik / Kategori Khusus
+                        </label>
+                        <select
+                          value={subRubrik}
+                          onChange={(e) => setSubRubrik(e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-semibold focus:outline-none"
+                          style={{
+                            backgroundColor: 'var(--color-wall)',
+                            color: 'var(--color-foreground)',
+                            border: '1px solid var(--color-line)',
+                          }}
+                        >
+                          <option value="">-- Tanpa Sub-Rubrik (Utama) --</option>
+                          {selected.subRubriks.map((sub) => (
+                            <option key={sub} value={sub}>
+                              {sub}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ fontFamily: 'var(--font-display)' }}>

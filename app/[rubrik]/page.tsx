@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ArticleCard from '@/components/cards/ArticleCard';
@@ -11,10 +11,12 @@ import { db } from '@/lib/db/repository';
 import { Newspaper, Loader2, ArrowLeft } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 
-export default function RubrikPage() {
+function RubrikContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const rawRubrik = params.rubrik;
   const rubrikSlug = Array.isArray(rawRubrik) ? rawRubrik[0] : (rawRubrik as string) || '';
+  const initialSub = searchParams.get('sub') || '';
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [rubrikMeta, setRubrikMeta] = useState<{
@@ -22,10 +24,14 @@ export default function RubrikPage() {
     description: string;
     color: string;
     emoji: string;
+    subRubriks: string[];
   } | null>(null);
+  const [selectedSubRubrik, setSelectedSubRubrik] = useState<string>(initialSub);
   const [loading, setLoading] = useState(true);
 
-
+  useEffect(() => {
+    setSelectedSubRubrik(initialSub);
+  }, [initialSub]);
 
   useEffect(() => {
     if (!rubrikSlug) return;
@@ -38,6 +44,7 @@ export default function RubrikPage() {
         description: dynamicRubrik.description,
         color: dynamicRubrik.color,
         emoji: dynamicRubrik.emoji,
+        subRubriks: dynamicRubrik.subRubriks || [],
       });
     } else if ((RUBRIK_META as any)[rubrikSlug]) {
       const meta = (RUBRIK_META as any)[rubrikSlug];
@@ -46,6 +53,7 @@ export default function RubrikPage() {
         description: meta.description,
         color: meta.color,
         emoji: meta.emoji,
+        subRubriks: [],
       });
     } else {
       setRubrikMeta({
@@ -53,6 +61,7 @@ export default function RubrikPage() {
         description: 'Arsip artikel dan liputan terkini',
         color: '#2563EB',
         emoji: '',
+        subRubriks: [],
       });
     }
 
@@ -98,7 +107,12 @@ export default function RubrikPage() {
     description: 'Arsip artikel',
     color: '#2563EB',
     emoji: '',
+    subRubriks: [],
   };
+
+  const displayArticles = selectedSubRubrik
+    ? articles.filter((a) => a.subRubrik?.toLowerCase() === selectedSubRubrik.toLowerCase())
+    : articles;
 
   return (
     <div
@@ -113,11 +127,17 @@ export default function RubrikPage() {
           <Link href="/" className="hover:underline">Beranda</Link>
           <span>/</span>
           <span style={{ color: meta.color }}>{meta.label}</span>
+          {selectedSubRubrik && (
+            <>
+              <span>/</span>
+              <span style={{ color: 'var(--color-foreground)' }}>{selectedSubRubrik}</span>
+            </>
+          )}
         </div>
 
         {/* Category Header */}
         <div
-          className="pb-5 mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4"
+          className="pb-5 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4"
           style={{ borderBottom: '2px solid var(--color-keyline)' }}
         >
           <div className="flex items-start gap-3">
@@ -155,14 +175,54 @@ export default function RubrikPage() {
               fontFamily: 'var(--font-display)',
             }}
           >
-            {articles.length} Artikel
+            {displayArticles.length} Artikel
           </div>
         </div>
 
+        {/* Sub-rubrik Filter Pills (Hanya jika rubrik memiliki breakdown) */}
+        {meta.subRubriks && meta.subRubriks.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setSelectedSubRubrik('')}
+              className="px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-sm transition-all"
+              style={{
+                backgroundColor: !selectedSubRubrik ? meta.color : 'var(--color-surface)',
+                color: !selectedSubRubrik ? '#ffffff' : 'var(--color-foreground)',
+                border: '1px solid',
+                borderColor: !selectedSubRubrik ? meta.color : 'var(--color-line)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              Semua ({meta.label})
+            </button>
+            {meta.subRubriks.map((sub) => {
+              const active = selectedSubRubrik.toLowerCase() === sub.toLowerCase();
+              return (
+                <button
+                  key={sub}
+                  type="button"
+                  onClick={() => setSelectedSubRubrik(active ? '' : sub)}
+                  className="px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-sm transition-all whitespace-nowrap"
+                  style={{
+                    backgroundColor: active ? meta.color : 'var(--color-surface)',
+                    color: active ? '#ffffff' : 'var(--color-foreground)',
+                    border: '1px solid',
+                    borderColor: active ? meta.color : 'var(--color-line)',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  {sub}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Responsive Articles Grid */}
-        {articles.length > 0 ? (
+        {displayArticles.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-            {articles.map((article) => (
+            {displayArticles.map((article) => (
               <div
                 key={article.id}
                 className="p-4 transition-all"
@@ -191,20 +251,47 @@ export default function RubrikPage() {
               Belum Ada Artikel
             </h3>
             <p className="text-xs max-w-sm mx-auto leading-relaxed mb-4" style={{ color: 'var(--color-muted)' }}>
-              Belum ada artikel yang dipublikasikan dalam rubrik ini.
+              {selectedSubRubrik
+                ? `Belum ada artikel dalam kategori sub-rubrik "${selectedSubRubrik}".`
+                : 'Belum ada artikel yang dipublikasikan dalam rubrik ini.'}
             </p>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase text-white"
-              style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
-            >
-              <ArrowLeft size={13} />
-              <span>Kembali ke Beranda</span>
-            </Link>
+            {selectedSubRubrik ? (
+              <button
+                type="button"
+                onClick={() => setSelectedSubRubrik('')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase text-white"
+                style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+              >
+                <span>Lihat Semua {meta.label}</span>
+              </button>
+            ) : (
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase text-white"
+                style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+              >
+                <ArrowLeft size={13} />
+                <span>Kembali ke Beranda</span>
+              </Link>
+            )}
           </div>
         )}
       </main>
       <Footer />
     </div>
+  );
+}
+
+export default function RubrikPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-wall)' }}>
+          <Loader2 size={24} className="animate-spin text-[var(--color-accent)]" />
+        </div>
+      }
+    >
+      <RubrikContent />
+    </Suspense>
   );
 }

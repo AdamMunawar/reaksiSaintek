@@ -59,6 +59,49 @@ const fetchArticleData = cache(async (slug: string) => {
   return found || null;
 });
 
+const fetchRelatedArticles = cache(async (article: Article, limit = 3): Promise<Article[]> => {
+  try {
+    if (process.env.DATABASE_URL) {
+      const res = await query(
+        `SELECT id, slug, title, excerpt, cover_image, cover_caption, rubrik, author_name, tags, published_at, views, read_time, created_at, updated_at
+         FROM articles
+         WHERE status = 'PUBLISHED'
+           AND id != $1
+           AND slug != $2
+         ORDER BY 
+           CASE WHEN rubrik = $3 THEN 0 ELSE 1 END,
+           COALESCE(published_at, created_at) DESC
+         LIMIT $4;`,
+        [article.id, article.slug, article.rubrik, limit]
+      );
+      if (res && res.rows && res.rows.length > 0) {
+        return res.rows.map((r: any) => ({
+          id: r.id,
+          slug: r.slug,
+          title: r.title,
+          excerpt: r.excerpt || '',
+          content: '',
+          author: r.author_name || 'Redaksi LPM Reaksi',
+          authorAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.author_name || 'Redaksi')}&background=1d4ed8&color=fff`,
+          rubrik: r.rubrik,
+          publishedAt: r.published_at || r.created_at || new Date().toISOString(),
+          readTime: r.read_time || 3,
+          thumbnail: r.cover_image || '',
+          coverCaption: r.cover_caption || '',
+          tags: Array.isArray(r.tags) ? r.tags : [],
+          views: r.views || 0,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('[RelatedArticles] Database fallback:', err);
+  }
+
+  return getRelatedArticles(article, limit);
+});
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const article = await fetchArticleData(slug);
@@ -134,7 +177,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
   const article = await fetchArticleData(slug);
-  const related = article ? getRelatedArticles(article, 3) : [];
+  const related = article ? await fetchRelatedArticles(article, 3) : [];
   const baseUrl = getBaseUrl();
 
   const jsonLd = article ? {

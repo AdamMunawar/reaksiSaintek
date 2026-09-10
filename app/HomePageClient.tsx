@@ -35,10 +35,12 @@ const RUBRIK_COLORS: Record<string, string> = {
   'epaper':       '#475569',
 };
 
-function RubrikLabel({ rubrik, size = 'sm' }: { rubrik: string; size?: 'sm' | 'md' }) {
+function RubrikLabel({ rubrik, subRubrik, size = 'sm' }: { rubrik: string; subRubrik?: string; size?: 'sm' | 'md' }) {
   const dynamic = db.getRubrikBySlug(rubrik);
   const color = dynamic?.color || RUBRIK_COLORS[rubrik] || '#2563eb';
   const meta  = RUBRIK_META[rubrik as keyof typeof RUBRIK_META];
+  const label = dynamic?.name || meta?.label || rubrik;
+  const displayText = subRubrik ? `${label} · ${subRubrik}` : label;
   return (
     <span
       style={{
@@ -50,7 +52,7 @@ function RubrikLabel({ rubrik, size = 'sm' }: { rubrik: string; size?: 'sm' | 'm
         textTransform: 'uppercase',
       }}
     >
-      {meta?.label || rubrik}
+      {displayText}
     </span>
   );
 }
@@ -130,7 +132,7 @@ function HorizCard({ article }: { article: any }) {
         />
       </div>
       <div className="flex-1 min-w-0">
-        <RubrikLabel rubrik={article.rubrik} />
+        <RubrikLabel rubrik={article.rubrik} subRubrik={article.subRubrik} />
         <h4 style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
@@ -242,6 +244,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
   const infografik = allArticles.filter((a) => a.rubrik === 'infografik').slice(0, 2);
   const trending = [...allArticles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
   const latestNews = [...allArticles].slice(0, 6);
+  const tickerArticles = allArticles.slice(0, 8); // Dibatasi 5-8 berita terkini terbaru agar tidak terhimpit
 
   const [saintekLead, ...saintekRest] = saintek;
   const [selisikLead, ...selisikRest] = selisik;
@@ -274,7 +277,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
           padding: '8px 0',
         }}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3 sm:gap-4">
           <span style={{
             background: '#fff',
             color: 'var(--color-accent)',
@@ -284,20 +287,22 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
             padding: '2px 8px',
+            borderRadius: '2px',
             flexShrink: 0,
           }}>
             Terkini
           </span>
           <div className="overflow-hidden flex-1" style={{ fontSize: '11.5px', fontWeight: 600, color: '#fff' }}>
-            {latestFallback.length > 0 ? (
+            {tickerArticles.length > 0 ? (
               <div className="ticker-track whitespace-nowrap">
-                {[...latestFallback, ...latestFallback].map((a, i) => (
+                {[...tickerArticles, ...tickerArticles].map((a, i) => (
                   <Link
-                    key={i}
+                    key={`${a.id || a.slug}-${i}`}
                     href={getArticleUrl(a)}
-                    className="inline-block mr-12 opacity-90 hover:opacity-100 hover:underline"
+                    className="inline-flex items-center gap-2 mr-10 sm:mr-14 opacity-90 hover:opacity-100 hover:underline transition-opacity"
                   >
-                    {a.title}
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/60 flex-shrink-0" />
+                    <span>{a.title}</span>
                   </Link>
                 ))}
               </div>
@@ -523,7 +528,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                               className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                             />
                           </div>
-                          <RubrikLabel rubrik={article.rubrik} />
+                          <RubrikLabel rubrik={article.rubrik} subRubrik={article.subRubrik} />
                           <h3 style={{
                             fontFamily: 'var(--font-display)',
                             fontWeight: 700,
@@ -547,7 +552,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
 
                 {/* ── RIGHT SIDEBAR ── */}
                 <div>
-                  <SectionHeader title="Kabar Kampus" href="/kabar-kampus" color="#2563eb" />
+                  <SectionHeader title={db.getRubrikBySlug('kabar-kampus')?.name || 'Kabar Kampus'} href="/kabar-kampus" color="#2563eb" />
                   <div>
                     {kabarKampus.map((item) => (
                       <Link
@@ -601,7 +606,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                               {idx + 1}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <RubrikLabel rubrik={item.rubrik} />
+                              <RubrikLabel rubrik={item.rubrik} subRubrik={item.subRubrik} />
                               <h4 style={{
                                 fontFamily: 'var(--font-display)',
                                 fontWeight: 700,
@@ -760,7 +765,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                     {saintekLead && (
                       <div>
-                        <SectionHeader title="Saintek Update" href="/saintek" color="#0891b2" />
+                        <SectionHeader title={db.getRubrikBySlug('saintek')?.name || 'Saintek'} href="/saintek" color="#0891b2" />
                         <Link href={getArticleUrl(saintekLead)} className="group block mb-5">
                           <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', overflow: 'hidden', borderRadius: 4, marginBottom: 12 }}>
                             <img
@@ -770,7 +775,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                             />
                             <div style={{ position: 'absolute', top: 10, left: 10 }}>
                               <span style={{ background: '#0891b2', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 2 }}>
-                                Saintek
+                                {db.getRubrikBySlug(saintekLead.rubrik)?.name || 'Saintek'}{saintekLead.subRubrik ? ` · ${saintekLead.subRubrik}` : ''}
                               </span>
                             </div>
                           </div>
@@ -801,7 +806,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
 
                     {opini.length > 0 && (
                       <div style={{ borderLeft: '1px solid var(--color-line)', paddingLeft: 'clamp(0px, 3%, 32px)' }} className="lg:pl-8">
-                        <SectionHeader title="Opini &amp; Esai" href="/opini" color="#7c3aed" />
+                        <SectionHeader title={db.getRubrikBySlug('opini')?.name || 'Opini'} href="/opini" color="#7c3aed" />
                         <div>
                           {opini.map((item, i) => (
                             <Link
@@ -863,7 +868,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                     {/* LENSA KATA */}
                     {lensaKata.length > 0 && (
                       <div>
-                        <SectionHeader title="Lensa Kata" href="/lensa-kata" color="#db2777" />
+                        <SectionHeader title={db.getRubrikBySlug('lensa-kata')?.name || 'Lensa Kata'} href="/lensa-kata" color="#db2777" />
                         <div>
                           {lensaKata.map((item, i) => (
                             <Link
@@ -880,9 +885,9 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                                 />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span style={{ color: '#db2777', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
-                                  Karya Mahasiswa
-                                </span>
+                                <div className="mb-1">
+                                  <RubrikLabel rubrik={item.rubrik} subRubrik={item.subRubrik} />
+                                </div>
                                 <h4 style={{
                                   fontFamily: 'var(--font-display)',
                                   fontWeight: 700,
@@ -906,7 +911,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                     {/* DATA VISUAL (INFOGRAFIK POSTER A3/A4) */}
                     {infografik.length > 0 && (
                       <div style={{ borderLeft: lensaKata.length > 0 ? '1px solid var(--color-line)' : 'none' }} className={lensaKata.length > 0 ? 'lg:pl-8' : ''}>
-                        <SectionHeader title="Data Visual" href="/infografik" color="#ea580c" />
+                        <SectionHeader title={db.getRubrikBySlug('infografik')?.name || 'Infografik'} href="/infografik" color="#ea580c" />
                         <div className="space-y-6">
                           {infografik.map((item) => (
                             <Link
@@ -986,7 +991,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                               className="group block transition-opacity hover:opacity-70"
                               style={{ paddingBottom: 12, marginBottom: 12, borderBottom: i < 4 ? '1px solid var(--color-line)' : 'none' }}
                             >
-                              <RubrikLabel rubrik={item.rubrik} />
+                              <RubrikLabel rubrik={item.rubrik} subRubrik={item.subRubrik} />
                               <h4 style={{
                                 fontFamily: 'var(--font-display)',
                                 fontWeight: 700,
@@ -1015,7 +1020,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
             <Rule />
             <section className="pb-8">
               <SectionHeader
-                title="E-Paper & Tabloid Mahasiswa"
+                title={db.getRubrikBySlug('e-paper')?.name || db.getRubrikBySlug('epaper')?.name || 'E-Paper'}
                 href="/e-paper"
                 color="#2563eb"
               />
