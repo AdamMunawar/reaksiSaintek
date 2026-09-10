@@ -134,6 +134,7 @@ export interface RubrikItem {
   emoji: string;
   order: number;
   subRubriks?: string[];
+  active?: boolean;
 }
 
 export interface MediaPartnerPackage {

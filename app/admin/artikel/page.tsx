@@ -43,17 +43,28 @@ export default function AdminArticlesPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
+    const syncRubriks = (list: any[]) => {
+      if (Array.isArray(list) && list.length > 0) {
+        setAvailableRubriks(
+          list.filter((r: any) => r.active !== false).map((r: any) => ({ slug: r.slug, name: r.name }))
+        );
+      }
+    };
+
     const rList = db.getRubriks();
     if (rList && rList.length > 0) {
-      setAvailableRubriks(rList.map((r) => ({ slug: r.slug, name: r.name })));
-    } else {
-      setAvailableRubriks(
-        Object.entries(RUBRIK_META).map(([key, meta]) => ({
-          slug: key,
-          name: meta.label,
-        }))
-      );
+      syncRubriks(rList);
     }
+
+    fetch('/api/rubriks')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          db.syncRubriksFromRemote(data);
+          syncRubriks(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -156,11 +156,52 @@ function SearchContent() {
   const initialRubrik = (searchParams.get('rubrik') as Rubrik) || 'semua';
 
   const [query, setQuery] = useState(initialQuery);
-  const [selectedRubrik, setSelectedRubrik] = useState<Rubrik | 'semua'>(initialRubrik);
+  const [selectedRubrik, setSelectedRubrik] = useState<Rubrik | 'semua' | string>(initialRubrik);
   const [sortBy, setSortBy] = useState<SortOption>('relevan');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [allArticles, setAllArticles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [rubrikList, setRubrikList] = useState<Array<{ slug: string; name: string; color?: string; active?: boolean }>>([]);
+
+  useEffect(() => {
+    // 1. Load initial rubriks from repository
+    const local = db.getRubriks();
+    if (local && local.length > 0) {
+      setRubrikList(local.filter((r: any) => r.active !== false));
+    } else {
+      setRubrikList(
+        Object.entries(RUBRIK_META).map(([key, meta]) => ({
+          slug: key,
+          name: meta.label,
+          color: meta.color,
+          active: true,
+        }))
+      );
+    }
+
+    // 2. Fetch live rubriks from PostgreSQL API
+    fetch('/api/rubriks')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          db.syncRubriksFromRemote(data);
+          setRubrikList(data.filter((r: any) => r.active !== false));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const getRubrikName = (slug: string) => {
+    const found = rubrikList.find((r) => r.slug === slug);
+    if (found) return found.name;
+    return (RUBRIK_META as any)[slug]?.label || slug;
+  };
+
+  const getRubrikColor = (slug: string) => {
+    const found = rubrikList.find((r) => r.slug === slug);
+    if (found?.color) return found.color;
+    return RUBRIK_COLORS[slug] || 'var(--color-accent)';
+  };
 
   useEffect(() => {
     const local = getAllActiveArticles();
@@ -187,7 +228,7 @@ function SearchContent() {
   useEffect(() => {
     const q = searchParams.get('q');
     if (q !== null) setQuery(q);
-    const r = searchParams.get('rubrik') as Rubrik | null;
+    const r = searchParams.get('rubrik') as string | null;
     if (r !== null) setSelectedRubrik(r);
 
     // If search term is present, also trigger server-side full-text search
@@ -217,7 +258,10 @@ function SearchContent() {
     const tokens = q.split(/\s+/).filter(Boolean);
 
     let filtered = allArticles.filter((a) => {
-      const matchRubrik = selectedRubrik === 'semua' || a.rubrik === selectedRubrik;
+      const matchRubrik =
+        selectedRubrik === 'semua' ||
+        a.rubrik === selectedRubrik ||
+        (selectedRubrik === 'kabar' && a.rubrik === 'kabar-kampus');
       if (!matchRubrik) return false;
 
       if (!q) return true;
@@ -258,7 +302,7 @@ function SearchContent() {
       }
       return 0;
     });
-  }, [query, selectedRubrik, sortBy, allArticles]);
+  }, [allArticles, query, selectedRubrik, sortBy]);
 
   return (
     <main
@@ -298,7 +342,7 @@ function SearchContent() {
             <div className="relative flex-1 flex items-center min-w-0">
               <Search size={16} className="absolute left-3 sm:left-4 pointer-events-none" style={{ color: 'var(--color-muted)' }} />
               <input
-                type="search"
+                type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Cari judul atau isi berita..."
@@ -335,7 +379,7 @@ function SearchContent() {
             </button>
           </form>
 
-          {/* Rubrik Filter Chips: Horizontal Smooth Touch Swipeable */}
+          {/* Rubrik Filter Chips: Dynamically rendered from CMS / database */}
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 flex flex-col sm:flex-row sm:items-center gap-2 overflow-hidden" style={{ borderTop: '1px solid var(--color-line)' }}>
             <div className="flex items-center gap-1.5 text-[10.5px] sm:text-xs font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--color-muted)' }}>
               <SlidersHorizontal size={12} />
@@ -358,14 +402,14 @@ function SearchContent() {
               >
                 Semua
               </button>
-              {Object.entries(RUBRIK_META).map(([key, meta]) => {
-                const isActive = selectedRubrik === key;
-                const rubrikColor = RUBRIK_COLORS[key] || 'var(--color-accent)';
+              {rubrikList.map((r) => {
+                const isActive = selectedRubrik === r.slug;
+                const rubrikColor = r.color || RUBRIK_COLORS[r.slug] || 'var(--color-accent)';
                 return (
                   <button
-                    key={key}
+                    key={r.slug}
                     type="button"
-                    onClick={() => setSelectedRubrik(key as Rubrik)}
+                    onClick={() => setSelectedRubrik(r.slug)}
                     className="px-2 sm:px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all flex-shrink-0 rounded-[2px]"
                     style={{
                       fontFamily: 'var(--font-display)',
@@ -374,7 +418,7 @@ function SearchContent() {
                       border: `1px solid ${isActive ? rubrikColor : 'var(--color-line)'}`,
                     }}
                   >
-                    {meta.label}
+                    {r.name}
                   </button>
                 );
               })}
@@ -519,7 +563,7 @@ function SearchContent() {
                 query
               );
               const articleHref = getArticleUrl(article);
-              const rubrikColor = RUBRIK_COLORS[article.rubrik] || 'var(--color-accent)';
+              const rubrikColor = getRubrikColor(article.rubrik);
 
               if (viewMode === 'list') {
                 return (
@@ -556,7 +600,7 @@ function SearchContent() {
                               fontFamily: 'var(--font-display)',
                             }}
                           >
-                            {RUBRIK_META[article.rubrik as keyof typeof RUBRIK_META]?.label || article.rubrik}
+                            {getRubrikName(article.rubrik)}
                           </span>
 
                           {matchedInContent && query && (
@@ -641,7 +685,7 @@ function SearchContent() {
                         fontFamily: 'var(--font-display)',
                       }}
                     >
-                      {RUBRIK_META[article.rubrik as keyof typeof RUBRIK_META]?.label || article.rubrik}
+                      {getRubrikName(article.rubrik)}
                     </span>
 
                     {matchedInContent && query && (

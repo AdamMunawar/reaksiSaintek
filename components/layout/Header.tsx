@@ -166,7 +166,7 @@ export default function Header() {
               {/* Desktop search */}
               <form onSubmit={handleSearch} className="hidden md:flex items-center relative">
                 <input
-                  type="search"
+                  type="text"
                   placeholder="Cari artikel..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -453,7 +453,7 @@ export default function Header() {
             <form onSubmit={handleSearch} className="flex items-center gap-2">
               <input
                 autoFocus
-                type="search"
+                type="text"
                 placeholder="Cari artikel..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
