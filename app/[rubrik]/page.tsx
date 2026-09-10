@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ArticleCard from '@/components/cards/ArticleCard';
@@ -12,6 +12,7 @@ import { Newspaper, Loader2, ArrowLeft } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 
 function RubrikContent() {
+  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const rawRubrik = params.rubrik;
@@ -30,6 +31,18 @@ function RubrikContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If user accesses legacy '/kabar-kampus' but admin configured 'kabar'
+    if (rubrikSlug === 'kabar-kampus') {
+      const allRubriks = db.getRubriks();
+      const hasKabar = allRubriks.some((r) => r.slug === 'kabar');
+      if (hasKabar) {
+        router.replace('/kabar?sub=Kabar%20Kampus');
+        return;
+      }
+    }
+  }, [rubrikSlug, router]);
+
+  useEffect(() => {
     setSelectedSubRubrik(initialSub);
   }, [initialSub]);
 
@@ -46,19 +59,10 @@ function RubrikContent() {
         emoji: dynamicRubrik.emoji,
         subRubriks: dynamicRubrik.subRubriks || [],
       });
-    } else if ((RUBRIK_META as any)[rubrikSlug]) {
-      const meta = (RUBRIK_META as any)[rubrikSlug];
-      setRubrikMeta({
-        label: meta.label,
-        description: meta.description,
-        color: meta.color,
-        emoji: meta.emoji,
-        subRubriks: [],
-      });
     } else {
       setRubrikMeta({
         label: rubrikSlug.replace(/-/g, ' ').toUpperCase(),
-        description: 'Arsip artikel dan liputan terkini',
+        description: 'Arsip artikel dan liputan',
         color: '#2563EB',
         emoji: '',
         subRubriks: [],
@@ -67,7 +71,11 @@ function RubrikContent() {
 
     // Load articles for this rubrik
     const all = getAllActiveArticles();
-    const filtered = all.filter((a) => a.rubrik === rubrikSlug);
+    const filtered = all.filter((a) => {
+      if (a.rubrik === rubrikSlug) return true;
+      if (rubrikSlug === 'kabar' && (a.rubrik === 'kabar-kampus' || a.subRubrik?.toLowerCase() === 'kabar kampus')) return true;
+      return false;
+    });
     setArticles(filtered);
     setLoading(false);
 

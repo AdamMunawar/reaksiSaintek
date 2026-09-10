@@ -175,7 +175,7 @@ export const db = {
       excerpt: cleanExcerptText,
       content,
       coverImage: article.coverImage || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80',
-      rubrik: article.rubrik || 'kabar-kampus',
+      rubrik: article.rubrik || (this.getRubriks()[0]?.slug || 'kabar'),
       subRubrik: article.subRubrik,
       authorId: article.authorId || 'user-superadmin',
       authorName: article.authorName || 'Redaksi LPM Reaksi',

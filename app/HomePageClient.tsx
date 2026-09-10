@@ -18,6 +18,7 @@ import { RubrikItem, EPaperItem } from '@/backend/db/schema';
 import { ArrowRight, Clock, TrendingUp, Sparkles, Newspaper, PenTool, Download } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
+import ArticleCard from '@/components/cards/ArticleCard';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DESIGN TOKENS
@@ -240,24 +241,60 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
     return () => window.removeEventListener('storage', sync);
   }, [initialArticles, initialEPapers]);
 
-  const latestFallback = allArticles;
-  const featuredArticles = allArticles.filter((a) => a.isFeatured);
+  const activeRubriks = rubriks.filter(
+    (r) => r && r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name?.toLowerCase() !== 'e-paper'
+  );
+  const activeSlugSet = new Set(activeRubriks.map((r) => r.slug));
+
+  // Normalize legacy articles: if 'kabar-kampus' was replaced with 'kabar', map to 'kabar'
+  const normalizedArticles = allArticles.map((a) => {
+    if (a.rubrik === 'kabar-kampus' && activeSlugSet.has('kabar')) {
+      return { ...a, rubrik: 'kabar' as any, subRubrik: a.subRubrik || 'Kabar Kampus' };
+    }
+    return a;
+  });
+
+  const latestFallback = normalizedArticles;
+  const featuredArticles = normalizedArticles.filter((a) => a.isFeatured);
   const heroArticles = featuredArticles.length > 0 ? featuredArticles : latestFallback;
   const [mainHero, ...heroRest] = heroArticles;
   const radarArticles = heroRest.slice(0, 3);
 
-  const kabarKampus = allArticles.filter((a) => a.rubrik === 'kabar-kampus').slice(0, 5);
-  const saintek = allArticles.filter((a) => a.rubrik === 'saintek').slice(0, 4);
-  const selisik = allArticles.filter((a) => a.rubrik === 'selisik').slice(0, 3);
-  const opini = allArticles.filter((a) => a.rubrik === 'opini').slice(0, 3);
-  const lensaKata = allArticles.filter((a) => a.rubrik === 'lensa-kata').slice(0, 3);
-  const infografik = allArticles.filter((a) => a.rubrik === 'infografik').slice(0, 2);
-  const trending = [...allArticles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
-  const latestNews = [...allArticles].slice(0, 6);
-  const tickerArticles = allArticles.slice(0, 8); // Dibatasi 5-8 berita terkini terbaru agar tidak terhimpit
+  // Dynamic right sidebar: picks the 1st active rubrik from admin CMS
+  const sidebarRubrik = activeRubriks.length > 0 ? activeRubriks[0] : null;
+  const sidebarArticles = sidebarRubrik
+    ? normalizedArticles.filter((a) => a.rubrik === sidebarRubrik.slug || a.subRubrik?.toLowerCase() === sidebarRubrik.slug).slice(0, 5)
+    : normalizedArticles.slice(0, 5);
+
+  // Filter sections ONLY for rubriks that are active in CMS
+  const saintek = activeSlugSet.has('saintek')
+    ? normalizedArticles.filter((a) => a.rubrik === 'saintek').slice(0, 4)
+    : [];
+  const selisik = activeSlugSet.has('selisik')
+    ? normalizedArticles.filter((a) => a.rubrik === 'selisik').slice(0, 3)
+    : [];
+  const opini = activeSlugSet.has('opini')
+    ? normalizedArticles.filter((a) => a.rubrik === 'opini').slice(0, 3)
+    : [];
+  const lensaKata = activeSlugSet.has('lensa-kata')
+    ? normalizedArticles.filter((a) => a.rubrik === 'lensa-kata').slice(0, 3)
+    : [];
+  const infografik = activeSlugSet.has('infografik')
+    ? normalizedArticles.filter((a) => a.rubrik === 'infografik').slice(0, 2)
+    : [];
+  const trending = [...normalizedArticles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
+  const latestNews = [...normalizedArticles].slice(0, 6);
+  const tickerArticles = normalizedArticles.slice(0, 8); // Dibatasi 5-8 berita terkini terbaru agar tidak terhimpit
 
   const [saintekLead, ...saintekRest] = saintek;
   const [selisikLead, ...selisikRest] = selisik;
+
+  // Custom rubriks added dynamically by admin (excluding sidebar and specialized layout rubriks)
+  const customLayoutSlugs = new Set(['selisik', 'saintek', 'opini', 'lensa-kata', 'infografik', 'epaper', 'e-paper']);
+  if (sidebarRubrik) {
+    customLayoutSlugs.add(sidebarRubrik.slug);
+  }
+  const customAdminRubriks = activeRubriks.filter((r) => !customLayoutSlugs.has(r.slug));
 
   return (
     <div
@@ -559,9 +596,13 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
 
                 {/* ── RIGHT SIDEBAR ── */}
                 <div>
-                  <SectionHeader title={db.getRubrikBySlug('kabar-kampus')?.name || 'Kabar Kampus'} href="/kabar-kampus" color="#2563eb" />
+                  <SectionHeader
+                    title={sidebarRubrik ? sidebarRubrik.name : 'Berita Terkini'}
+                    href={sidebarRubrik ? `/${sidebarRubrik.slug}` : '/'}
+                    color={sidebarRubrik?.color || '#2563eb'}
+                  />
                   <div>
-                    {kabarKampus.map((item) => (
+                    {sidebarArticles.map((item) => (
                       <Link
                         key={item.id}
                         href={getArticleUrl(item)}
@@ -1020,6 +1061,27 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                 </section>
               </>
             )}
+
+            {/* ══════════════════════════════════════════════════════════════
+                DYNAMIC SECTIONS FOR CUSTOM ADMIN RUBRIKS
+                ══════════════════════════════════════════════════════════════ */}
+            {customAdminRubriks.map((r) => {
+              const rArticles = normalizedArticles.filter((a) => a.rubrik === r.slug || a.subRubrik?.toLowerCase() === r.slug);
+              if (rArticles.length === 0) return null;
+              return (
+                <React.Fragment key={r.slug}>
+                  <Rule />
+                  <section className="pb-8">
+                    <SectionHeader title={r.name} href={`/${r.slug}`} color={r.color || 'var(--color-accent)'} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {rArticles.slice(0, 3).map((art) => (
+                        <ArticleCard key={art.id} article={art} />
+                      ))}
+                    </div>
+                  </section>
+                </React.Fragment>
+              );
+            })}
 
             {/* ══════════════════════════════════════════════════════════════
                 ZONE: E-PAPER & TABLOID DIGITAL

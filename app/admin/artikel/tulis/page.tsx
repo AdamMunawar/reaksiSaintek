@@ -32,7 +32,7 @@ export default function WriteArticlePage() {
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
-  const [rubrik, setRubrik] = useState<string>('kabar-kampus');
+  const [rubrik, setRubrik] = useState<string>('');
   const [subRubrik, setSubRubrik] = useState<string>('');
   const [availableRubriks, setAvailableRubriks] = useState<Array<{ slug: string; name: string; subRubriks?: string[] }>>([]);
   const [excerpt, setExcerpt] = useState('');

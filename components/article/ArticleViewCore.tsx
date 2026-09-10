@@ -691,24 +691,9 @@ export default function ArticleViewCore({
           </div>
         )}
 
-        {/* Bottom Actions: Kembali, Copy link, Views */}
+        {/* Bottom Actions: Copy link, Views */}
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 py-4" style={{ borderTop: '1px solid var(--color-line)' }}>
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleGoBack}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold uppercase border rounded transition-all hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] cursor-pointer"
-              style={{
-                borderColor: 'var(--color-line)',
-                backgroundColor: 'var(--color-surface)',
-                color: 'var(--color-muted)',
-                fontFamily: 'var(--font-display)',
-              }}
-              aria-label="Kembali ke halaman sebelumnya"
-            >
-              <ArrowLeft size={13} />
-              <span>Kembali</span>
-            </button>
-
             <button
               onClick={handleCopyLink}
               className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase border rounded transition-all cursor-pointer"
@@ -1030,23 +1015,6 @@ export default function ArticleViewCore({
           </button>
         </div>
       </aside>
-
-      {/* ── Mobile Floating Back Button (Bottom-Left, Easy Thumb Navigation) ── */}
-      <button
-        id="btn-mobile-floating-back"
-        onClick={handleGoBack}
-        aria-label="Kembali ke halaman sebelumnya"
-        title="Kembali"
-        className="fixed bottom-6 left-6 z-50 sm:hidden w-11 h-11 flex items-center justify-center rounded-full border-2 shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-line)',
-          color: 'var(--color-foreground)',
-          boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.18)',
-        }}
-      >
-        <ArrowLeft size={18} />
-      </button>
     </div>
   );
 }
