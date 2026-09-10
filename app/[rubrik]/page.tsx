@@ -71,6 +71,25 @@ function RubrikContent() {
     setArticles(filtered);
     setLoading(false);
 
+    // Live sync rubrik meta from API
+    fetch('/api/rubriks')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const found = data.find((r: any) => r.slug === rubrikSlug);
+          if (found) {
+            setRubrikMeta({
+              label: found.name,
+              description: found.description || '',
+              color: found.color || '#2563EB',
+              emoji: found.emoji || '',
+              subRubriks: found.subRubriks || [],
+            });
+          }
+        }
+      })
+      .catch(() => {});
+
     // Live sync dari Supabase API
     fetch(`/api/articles?status=PUBLISHED&rubrik=${encodeURIComponent(rubrikSlug)}`)
       .then((res) => (res.ok ? res.json() : null))

@@ -53,20 +53,19 @@ export default function WriteArticlePage() {
       setAvailableRubriks(list.map((r) => ({ slug: r.slug, name: r.name, subRubriks: r.subRubriks || [] })));
       setRubrik(list[0].slug);
     } else {
-      setAvailableRubriks(
-        Object.entries(RUBRIK_META).map(([key, meta]) => ({
-          slug: key,
-          name: meta.label,
-          subRubriks: [],
-        }))
-      );
+      setAvailableRubriks([]);
+      setRubrik('');
     }
 
     fetch('/api/rubriks')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setAvailableRubriks(data.map((r: any) => ({ slug: r.slug, name: r.name, subRubriks: r.subRubriks || [] })));
+        if (Array.isArray(data)) {
+          const mapped = data.map((r: any) => ({ slug: r.slug, name: r.name, subRubriks: r.subRubriks || [] }));
+          setAvailableRubriks(mapped);
+          if (mapped.length > 0) {
+            setRubrik((prev) => prev || mapped[0].slug);
+          }
         }
       })
       .catch(() => {});
@@ -437,26 +436,35 @@ export default function WriteArticlePage() {
               <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ fontFamily: 'var(--font-display)' }}>
                 Rubrik Publikasi *
               </label>
-              <select
-                value={rubrik}
-                onChange={(e) => {
-                  setRubrik(e.target.value);
-                  setSubRubrik('');
-                }}
-                className="w-full px-3 py-2 text-xs font-bold uppercase focus:outline-none"
-                style={{
-                  backgroundColor: 'var(--color-wall)',
-                  color: 'var(--color-foreground)',
-                  border: '1px solid var(--color-line)',
-                  fontFamily: 'var(--font-display)',
-                }}
-              >
-                {availableRubriks.map((r) => (
-                  <option key={r.slug} value={r.slug}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+              {availableRubriks.length > 0 ? (
+                <select
+                  value={rubrik}
+                  onChange={(e) => {
+                    setRubrik(e.target.value);
+                    setSubRubrik('');
+                  }}
+                  className="w-full px-3 py-2 text-xs font-bold uppercase focus:outline-none"
+                  style={{
+                    backgroundColor: 'var(--color-wall)',
+                    color: 'var(--color-foreground)',
+                    border: '1px solid var(--color-line)',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  {availableRubriks.map((r) => (
+                    <option key={r.slug} value={r.slug}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs rounded-sm">
+                  <p className="font-semibold mb-1">Belum ada rubrik aktif</p>
+                  <Link href="/admin/rubrik" className="underline font-bold text-blue-600 dark:text-blue-400">
+                    Konfigurasi rubrik terlebih dahulu di sini &rarr;
+                  </Link>
+                </div>
+              )}
             </div>
 
             {(() => {

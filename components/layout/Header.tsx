@@ -17,13 +17,6 @@ export interface NavLinkItem {
 
 const DEFAULT_NAV_LINKS: NavLinkItem[] = [
   { href: '/', label: 'Beranda' },
-  { href: '/kabar-kampus', label: 'Kabar Kampus', slug: 'kabar-kampus' },
-  { href: '/selisik', label: 'Selisik', slug: 'selisik' },
-  { href: '/saintek', label: 'Saintek', slug: 'saintek' },
-  { href: '/opini', label: 'Opini', slug: 'opini' },
-  { href: '/feature', label: 'Feature', slug: 'feature' },
-  { href: '/lensa-kata', label: 'Lensa Kata', slug: 'lensa-kata' },
-  { href: '/infografik', label: 'Infografik', slug: 'infografik' },
   { href: '/e-paper', label: 'E-Paper', slug: 'e-paper' },
 ];
 
@@ -40,24 +33,21 @@ export default function Header() {
   useEffect(() => {
     setMounted(true);
     const syncNav = () => {
-      const list = db.getRubriks();
-      if (list && list.length > 0) {
-        // Exclude epaper rubrik from dynamic rubrik list to avoid duplicate links
-        const filteredRubriks = list.filter(
-          (r) => r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name.toLowerCase() !== 'e-paper'
-        );
+      const list = db.getRubriks() || [];
+      const filteredRubriks = list.filter(
+        (r) => r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name?.toLowerCase() !== 'e-paper'
+      );
 
-        setNavLinks([
-          { href: '/', label: 'Beranda' },
-          ...filteredRubriks.map((r) => ({
-            href: `/${r.slug}`,
-            label: r.name,
-            slug: r.slug,
-            subRubriks: r.subRubriks || [],
-          })),
-          { href: '/e-paper', label: 'E-Paper', slug: 'e-paper' },
-        ]);
-      }
+      setNavLinks([
+        { href: '/', label: 'Beranda' },
+        ...filteredRubriks.map((r) => ({
+          href: `/${r.slug}`,
+          label: r.name,
+          slug: r.slug,
+          subRubriks: r.subRubriks || [],
+        })),
+        { href: '/e-paper', label: 'E-Paper', slug: 'e-paper' },
+      ]);
     };
     syncNav();
 
@@ -65,7 +55,7 @@ export default function Header() {
     fetch('/api/rubriks')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const filtered = data.filter(
             (r: any) => r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name?.toLowerCase() !== 'e-paper'
           );
@@ -75,7 +65,7 @@ export default function Header() {
               href: `/${r.slug}`,
               label: r.name,
               slug: r.slug,
-              subRubriks: Array.isArray(r.sub_rubriks) ? r.sub_rubriks : Array.isArray(r.subRubriks) ? r.subRubriks : [],
+              subRubriks: r.subRubriks || [],
             })),
             { href: '/e-paper', label: 'E-Paper', slug: 'e-paper' },
           ]);

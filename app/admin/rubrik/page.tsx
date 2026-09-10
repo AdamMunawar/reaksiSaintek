@@ -187,8 +187,11 @@ export default function AdminRubrikPage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const confirmDeleteRubrik = () => {
+  const confirmDeleteRubrik = async () => {
     if (!rubrikToDelete) return;
+    try {
+      await fetch(`/api/rubriks?id=${encodeURIComponent(rubrikToDelete.id)}`, { method: 'DELETE' });
+    } catch (_) {}
     db.deleteRubrik(rubrikToDelete.id);
     loadData();
     setNotification({ type: 'success', message: `Rubrik "${rubrikToDelete.name}" berhasil dihapus.` });
@@ -331,7 +334,20 @@ export default function AdminRubrikPage() {
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--color-line)' }}>
-              {rubriks.map((r, index) => {
+              {rubriks.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-xs text-[var(--color-muted)]">
+                    <div className="flex flex-col items-center justify-center gap-2.5">
+                      <Layers size={36} className="opacity-30" />
+                      <p className="font-bold text-sm text-[var(--color-foreground)]">Belum Ada Rubrik Terdaftar</p>
+                      <p className="text-[11.5px] max-w-sm mx-auto leading-relaxed">
+                        Rubrik portal saat ini kosong (0). Klik tombol <strong>Tambah Rubrik</strong> di atas untuk membuat rubrik baru yang dapat dikonfigurasi.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                rubriks.map((r, index) => {
                 const count = articles.filter((a) => a.rubrik === r.slug).length;
                 return (
                   <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
@@ -443,7 +459,7 @@ export default function AdminRubrikPage() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

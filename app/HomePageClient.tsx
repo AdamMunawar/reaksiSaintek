@@ -209,6 +209,16 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
         setIsLoaded(true);
       });
 
+    // Live background sync for rubriks
+    fetch('/api/rubriks')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setRubriks(data);
+        }
+      })
+      .catch(() => {});
+
     // Live background sync for epapers
     fetch('/api/epapers?limit=6')
       .then((res) => (res.ok ? res.json() : null))
@@ -418,21 +428,18 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                       </Link>
                     </>
                   ) : (
-                    Object.entries(RUBRIK_META).map(([key, meta]) => (
-                      <Link
-                        key={key}
-                        href={`/${key}`}
-                        className="px-2.5 py-1 text-[10px] font-bold uppercase border hover:border-[var(--color-accent)] transition-colors"
-                        style={{
-                          backgroundColor: 'var(--color-wall)',
-                          borderColor: 'var(--color-line)',
-                          color: 'var(--color-foreground)',
-                          fontFamily: 'var(--font-display)',
-                        }}
-                      >
-                        {meta.label}
-                      </Link>
-                    ))
+                    <Link
+                      href="/e-paper"
+                      className="px-2.5 py-1 text-[10px] font-bold uppercase border hover:border-[var(--color-accent)] transition-colors"
+                      style={{
+                        backgroundColor: 'var(--color-wall)',
+                        borderColor: 'var(--color-line)',
+                        color: 'var(--color-foreground)',
+                        fontFamily: 'var(--font-display)',
+                      }}
+                    >
+                      E-Paper
+                    </Link>
                   )}
                 </div>
               </div>

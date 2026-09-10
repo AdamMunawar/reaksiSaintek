@@ -75,3 +75,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gagal menyimpan rubrik.' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session || (session.role !== 'pemred' && session.role !== 'redaktur' && session.role !== 'superadmin')) {
+    return NextResponse.json({ error: 'Akses Ditolak: Anda tidak memiliki wewenang hapus rubrik.' }, { status: 403 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'ID rubrik diperlukan.' }, { status: 400 });
+    }
+
+    if (process.env.DATABASE_URL) {
+      try {
+        await query('DELETE FROM rubriks WHERE id = $1 OR slug = $1;', [id]);
+      } catch (dbErr) {
+        console.warn('PostgreSQL rubrik delete error:', dbErr);
+      }
+    }
+
+    db.deleteRubrik(id);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting rubrik:', error);
+    return NextResponse.json({ error: 'Gagal menghapus rubrik.' }, { status: 500 });
+  }
+}

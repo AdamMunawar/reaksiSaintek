@@ -1,23 +1,8 @@
 import { User, Article, SitePageContent, StaffMember, MediaItem, RubrikItem, EPaperItem, MediaPartnerConfig } from './schema';
 
-export const SEED_USERS: User[] = [
-  {
-    id: 'user-superadmin',
-    name: 'Administrator Meja Redaksi',
-    email: 'admin@reaksi.id',
-    role: 'superadmin',
-    institution: 'LPM Reaksi FST UIN SGD Bandung',
-    bio: 'Pengawas teknis sistem dan portal resmi LPM Reaksi.',
-    createdAt: '2026-01-01T00:00:00Z',
-  },
-];
-
-// Mulai dari 0 naskah bersih untuk penerbitan langsung oleh redaksi
+export const SEED_USERS: User[] = [];
 export const SEED_ARTICLES: Article[] = [];
-
-// Mulai dari 0 terbitan e-paper bersih untuk diunggah melalui admin
 export const SEED_EPAPERS: EPaperItem[] = [];
-
 export const SEED_PAGES: SitePageContent[] = [
   {
     id: 'page-tentang',
@@ -60,107 +45,15 @@ export const SEED_PAGES: SitePageContent[] = [
 // Susunan pengurus dikelola dinamis per departemen melalui panel admin
 export const SEED_STAFF: StaffMember[] = [];
 
-export const SEED_MEDIA: MediaItem[] = [
-  {
-    id: 'med-1',
-    filename: 'reaksi.png',
-    url: '/images/reaksi.png',
-    size: 155877,
-    mimeType: 'image/png',
-    uploadedBy: 'Superadmin',
-    createdAt: '2026-09-08T00:00:00Z',
-  },
-  {
-    id: 'med-2',
-    filename: 'reaksi-dark.png',
-    url: '/images/reaksi-dark.png',
-    size: 155877,
-    mimeType: 'image/png',
-    uploadedBy: 'Superadmin',
-    createdAt: '2026-09-08T00:00:00Z',
-  },
-];
+export const SEED_MEDIA: MediaItem[] = [];
 
-export const SEED_RUBRIKS: RubrikItem[] = [
-  {
-    id: 'rubrik-1',
-    slug: 'kabar-kampus',
-    name: 'Kabar Kampus',
-    description: 'Berita terkini seputar kampus FST & UIN SGD Bandung',
-    color: '#2563EB',
-    emoji: '',
-    order: 1,
-  },
-  {
-    id: 'rubrik-2',
-    slug: 'saintek',
-    name: 'Saintek',
-    description: 'Perkembangan sains, teknologi, dan inovasi terkini',
-    color: '#0891B2',
-    emoji: '',
-    order: 2,
-  },
-  {
-    id: 'rubrik-3',
-    slug: 'opini',
-    name: 'Opini',
-    description: 'Pandangan kritis dan esai mahasiswa',
-    color: '#7C3AED',
-    emoji: '',
-    order: 3,
-  },
-  {
-    id: 'rubrik-4',
-    slug: 'feature',
-    name: 'Feature',
-    description: 'Laporan mendalam dan human interest',
-    color: '#059669',
-    emoji: '',
-    order: 4,
-  },
-  {
-    id: 'rubrik-5',
-    slug: 'lensa-kata',
-    name: 'Lensa Kata',
-    description: 'Ruang karya sastra — puisi, cerpen, prosa',
-    color: '#DB2777',
-    emoji: '',
-    order: 5,
-  },
-  {
-    id: 'rubrik-6',
-    slug: 'infografik',
-    name: 'Infografik',
-    description: 'Data dan fakta dalam visualisasi menarik',
-    color: '#EA580C',
-    emoji: '',
-    order: 6,
-  },
-  {
-    id: 'rubrik-7',
-    slug: 'regional',
-    name: 'Regional',
-    description: 'Berita daerah dan isu lokal Jawa Barat',
-    color: '#D97706',
-    emoji: '',
-    order: 7,
-  },
-  {
-    id: 'rubrik-9',
-    slug: 'selisik',
-    name: 'Selisik',
-    description: 'Investigasi dan liputan mendalam eksklusif',
-    color: '#DC2626',
-    emoji: '',
-    order: 8,
-  },
-];
+export const SEED_RUBRIKS: RubrikItem[] = [];
 
 export const DEFAULT_MEDIA_PARTNER: MediaPartnerConfig = {
   heroTitle: 'SOP Kerjasama Media Partner',
   heroSubtitle: 'LPM Reaksi Fakultas Sains dan Teknologi UIN Sunan Gunung Djati Bandung membuka ruang kolaborasi seluas-luasnya bagi organisasi kemahasiswaan, komunitas, lembaga kampus, dan instansi eksternal untuk memperluas jangkauan publikasi acara dan kegiatan positif.',
   whatsappNumber: '6281234567890',
-  whatsappText: 'Halo Humas LPM Reaksi, kami ingin mengajukan kerjasama media partner.',
+  whatsappText: 'Halo LPM Reaksi, kami ingin mengajukan kerjasama media partner.',
   contactEmail: 'redaksi@reaksi.id',
   metricAudience: '10.000+',
   metricAudienceDesc: 'Sivitas akademika FST, mahasiswa UIN SGD Bandung, dan pegiat sains nasional.',
