@@ -60,6 +60,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── HANDLE LEGACY WORDPRESS DATE URLS (e.g. /2022/06/07/slug) ──
+  const legacyWpMatch = pathname.match(/^\/\d{4}\/\d{2}(\/\d{2})?\/(.+)$/);
+  if (legacyWpMatch) {
+    const rawSlug = legacyWpMatch[2].replace(/\/+$/, '');
+    const cleanSearch = rawSlug.replace(/[-_]+/g, ' ').trim();
+    const targetUrl = new URL(`/cari?q=${encodeURIComponent(cleanSearch)}`, request.url);
+    return NextResponse.redirect(targetUrl, 301);
+  }
+
   // ── 2. SUBDOMAIN CMS (cms.lpmreaksi.com / cms.localhost:3000) ──
   if (isCmsSubdomain) {
     // Root URL on CMS subdomain -> automatically route to /admin or /login

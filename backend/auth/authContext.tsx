@@ -30,13 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Purge exposed localStorage auth keys for privacy and security
+    // Purge exposed legacy localStorage auth keys for privacy and security
     if (typeof window !== 'undefined') {
       try {
         const toRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && k.startsWith('reaksi_')) {
+          if (k && k.startsWith('reaksi_auth_')) {
             toRemove.push(k);
           }
         }

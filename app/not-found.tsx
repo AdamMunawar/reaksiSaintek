@@ -19,14 +19,13 @@ export default function NotFound() {
     }
   };
 
-  const rubriks = [
-    { name: 'Kabar Kampus', href: '/kabar-kampus' },
-    { name: 'Saintek Update', href: '/saintek' },
-    { name: 'Opini Mahasiswa', href: '/opini' },
-    { name: 'Feature & Humanis', href: '/feature' },
-    { name: 'Lensa Kata', href: '/lensa-kata' },
-    { name: 'E-Paper & Tabloid', href: '/e-paper' },
-  ];
+  const dynamicRubriks = db.getRubriks();
+  const rubriks = dynamicRubriks.length > 0
+    ? dynamicRubriks.filter((r) => r.slug !== 'epaper' && r.slug !== 'e-paper').slice(0, 6).map((r) => ({ name: r.name, href: `/${r.slug}` }))
+    : [
+        { name: 'Beranda', href: '/' },
+        { name: 'E-Paper', href: '/e-paper' },
+      ];
 
   return (
     <div
