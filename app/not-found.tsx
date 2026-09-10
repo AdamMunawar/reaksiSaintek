@@ -8,9 +8,37 @@ import Footer from '@/components/layout/Footer';
 import { Search, Home, ArrowLeft, Compass, Newspaper } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 
+import { db } from '@/backend/db/repository';
+import type { RubrikItem } from '@/backend/db/schema';
+import { useEffect } from 'react';
+
+interface QuickLink {
+  name: string;
+  href: string;
+}
+
 export default function NotFound() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [rubriks, setRubriks] = useState<QuickLink[]>([
+    { name: 'Beranda', href: '/' },
+    { name: 'E-Paper', href: '/e-paper' },
+  ]);
+
+  useEffect(() => {
+    try {
+      const dynamicRubriks = db.getRubriks();
+      if (Array.isArray(dynamicRubriks) && dynamicRubriks.length > 0) {
+        const filtered = dynamicRubriks
+          .filter((r: RubrikItem) => r.slug !== 'epaper' && r.slug !== 'e-paper')
+          .slice(0, 6)
+          .map((r: RubrikItem) => ({ name: r.name, href: `/${r.slug}` }));
+        if (filtered.length > 0) {
+          setRubriks(filtered);
+        }
+      }
+    } catch (_) {}
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,14 +46,6 @@ export default function NotFound() {
       router.push(`/cari?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
-
-  const dynamicRubriks = db.getRubriks();
-  const rubriks = dynamicRubriks.length > 0
-    ? dynamicRubriks.filter((r) => r.slug !== 'epaper' && r.slug !== 'e-paper').slice(0, 6).map((r) => ({ name: r.name, href: `/${r.slug}` }))
-    : [
-        { name: 'Beranda', href: '/' },
-        { name: 'E-Paper', href: '/e-paper' },
-      ];
 
   return (
     <div
