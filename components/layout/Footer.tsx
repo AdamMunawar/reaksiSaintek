@@ -23,8 +23,8 @@ const TikTokIcon = () => (
 
 const SOCIAL_LINKS = [
   { Icon: InstagramIcon, href: 'https://instagram.com/lpmreaksi_', label: 'Instagram' },
-  { Icon: YoutubeIcon, href: 'https://youtube.com/@lpmreaksi', label: 'YouTube' },
-  { Icon: TikTokIcon, href: 'https://tiktok.com/@lpmreaksi', label: 'TikTok' },
+  { Icon: YoutubeIcon, href: 'https://youtube.com/@lpmreaksi4281', label: 'YouTube' },
+  { Icon: TikTokIcon, href: 'https://tiktok.com/@redaksisaintek', label: 'TikTok' },
 ];
 
 const NAV_LINKS = [
