@@ -63,12 +63,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // 2. Rubrik / Category Pages
-  const rubrikPages: MetadataRoute.Sitemap = RUBRIKS.map((rubrik) => ({
-    url: `${baseUrl}/${rubrik.slug}`,
-    lastModified: now,
-    changeFrequency: 'daily',
-    priority: 0.85,
-  }));
+  let activeRubriksList: Array<{ slug: string }> = [];
+  try {
+    if (process.env.DATABASE_URL) {
+      const rubrikRes = await query(`SELECT slug FROM rubriks ORDER BY sort_order ASC;`);
+      if (rubrikRes && rubrikRes.rows && rubrikRes.rows.length > 0) {
+        activeRubriksList = rubrikRes.rows;
+      }
+    }
+  } catch (_) {}
+  if (activeRubriksList.length === 0) {
+    activeRubriksList = (db.getRubriks() || []).map((r) => ({ slug: r.slug }));
+  }
+  if (activeRubriksList.length === 0) {
+    activeRubriksList = RUBRIKS.map((r) => ({ slug: r.slug }));
+  }
+
+  const rubrikPages: MetadataRoute.Sitemap = activeRubriksList
+    .filter((r) => r.slug !== 'epaper' && r.slug !== 'e-paper')
+    .map((rubrik) => ({
+      url: `${baseUrl}/${rubrik.slug}`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    }));
 
   // 3. Dynamic Article Pages (canonical: /[rubrik]/[cleanSlug])
   let publishedArticles: Array<{ slug: string; rubrik?: string; updatedAt?: string }> = [];
