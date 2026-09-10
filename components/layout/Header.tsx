@@ -3,79 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { Search, Menu, X, Sun, Moon, User as UserIcon, LogIn, LayoutDashboard } from 'lucide-react';
+import { Search, Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth/authContext';
-
 import { db } from '@/lib/db/repository';
-
-function HeaderAuthAction() {
-  const { user, role, isLoggedIn } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <Link
-        href="/login"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors hover:opacity-75 flex-shrink-0"
-        style={{
-          border: '1px solid var(--color-line)',
-          color: 'var(--color-foreground)',
-          fontFamily: 'var(--font-display)',
-        }}
-        title="Masuk Meja Redaksi"
-        suppressHydrationWarning
-      >
-        <LogIn size={13} />
-        <span>Login</span>
-      </Link>
-    );
-  }
-
-  if (isLoggedIn && user) {
-    const isKontributor = role === 'kontributor';
-    const targetUrl = isKontributor ? '/kontributor' : '/admin';
-    const label = isKontributor ? 'Portal Kontributor' : 'Meja Redaksi';
-
-    return (
-      <Link
-        href={targetUrl}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wider text-white transition-opacity hover:opacity-90 flex-shrink-0"
-        style={{
-          backgroundColor: isKontributor ? '#ea580c' : 'var(--color-accent)',
-          fontFamily: 'var(--font-display)',
-        }}
-        title={label}
-        suppressHydrationWarning
-      >
-        <LayoutDashboard size={13} />
-        <span>{label}</span>
-      </Link>
-    );
-  }
-
-  return (
-    <Link
-      href="/login"
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors hover:opacity-75 flex-shrink-0"
-      style={{
-        border: '1px solid var(--color-line)',
-        color: 'var(--color-foreground)',
-        fontFamily: 'var(--font-display)',
-      }}
-      title="Masuk Meja Redaksi"
-      suppressHydrationWarning
-    >
-      <LogIn size={13} />
-      <span>Login</span>
-    </Link>
-  );
-}
 
 const DEFAULT_NAV_LINKS = [
   { href: '/', label: 'Beranda' },
@@ -197,10 +128,7 @@ export default function Header() {
                 </button>
               </form>
 
-              {/* Login / Dashboard Link (Desktop/Tablet) */}
-              <div className="hidden sm:flex items-center">
-                <HeaderAuthAction />
-              </div>
+
 
               {/* Theme toggle */}
               {mounted && (
@@ -286,13 +214,7 @@ export default function Header() {
               </button>
             </div>
 
-            {/* Mobile Auth / Meja Redaksi Card */}
-            <div className="p-3.5 border-b" style={{ borderColor: 'var(--color-line)', backgroundColor: 'var(--color-wall)' }}>
-              <span className="text-[10px] font-bold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-display)' }}>
-                Akses Redaksi &amp; Penulis
-              </span>
-              <HeaderAuthAction />
-            </div>
+
 
             <div className="p-4">
               {navLinks.map((item) => (

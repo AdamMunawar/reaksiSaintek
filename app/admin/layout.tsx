@@ -42,6 +42,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, role, logout, canManageUsers, canManagePages, canReview, canWriteArticle } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [publicSiteUrl, setPublicSiteUrl] = useState('/');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      const mainOrigin = origin.replace('//cms.', '//').replace('//redaksi.', '//');
+      setPublicSiteUrl(mainOrigin);
+    }
+  }, []);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -84,7 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         {/* Brand */}
         <div className="p-5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-line)' }}>
-          <Link href="/" className="inline-block">
+          <Link href="/admin" className="inline-block" title="Dashboard Meja Redaksi">
             <Image
               src="/images/reaksi.png"
               alt="LPM Reaksi"
@@ -158,9 +167,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
           </div>
 
-          <Link
-            href="/"
+          <a
+            href={publicSiteUrl}
             target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider py-1.5 px-2 hover:opacity-70 transition-opacity"
             style={{
               backgroundColor: 'var(--color-wall)',
@@ -168,10 +178,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               color: 'var(--color-muted)',
               fontFamily: 'var(--font-display)',
             }}
+            title="Buka Website Utama LPM Reaksi di tab baru"
           >
             <span>Buka Web Publik</span>
             <ExternalLink size={12} />
-          </Link>
+          </a>
         </div>
       </aside>
 
@@ -183,7 +194,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           borderBottom: '2px solid var(--color-keyline)',
         }}
       >
-        <Link href="/" className="inline-block">
+        <Link href="/admin" className="inline-block" title="Dashboard Meja Redaksi">
           <Image
             src="/images/reaksi.png"
             alt="LPM Reaksi"
@@ -263,6 +274,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </span>
             </div>
 
+            <a
+              href={publicSiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold uppercase tracking-wider transition-opacity hover:opacity-80"
+              style={{
+                backgroundColor: 'var(--color-wall)',
+                border: '1px solid var(--color-line)',
+                color: 'var(--color-foreground)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              <ExternalLink size={13} />
+              <span>Buka Web Publik</span>
+            </a>
+
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-colors"
@@ -306,6 +333,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="text-[11px] hidden sm:inline" style={{ color: 'var(--color-muted)' }}>
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
+            <a
+              href={publicSiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-opacity hover:opacity-80"
+              style={{
+                backgroundColor: 'var(--color-wall)',
+                border: '1px solid var(--color-line)',
+                color: 'var(--color-foreground)',
+                fontFamily: 'var(--font-display)',
+              }}
+              title="Kunjungi Website Utama di tab baru"
+            >
+              <ExternalLink size={12} />
+              <span className="hidden sm:inline">Web Utama</span>
+            </a>
           </div>
         </div>
 
