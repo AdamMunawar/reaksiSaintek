@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS rubriks (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     color VARCHAR(20) DEFAULT '#2563EB',
+    sub_rubriks JSONB DEFAULT '[]'::jsonb,
     sort_order INTEGER DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

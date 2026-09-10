@@ -78,12 +78,18 @@ function RubrikContent() {
         if (Array.isArray(data)) {
           const found = data.find((r: any) => r.slug === rubrikSlug);
           if (found) {
+            let parsedSubs: string[] = [];
+            const rawSubs = found.subRubriks || found.sub_rubriks;
+            if (Array.isArray(rawSubs)) parsedSubs = rawSubs;
+            else if (typeof rawSubs === 'string' && rawSubs.trim()) {
+              try { parsedSubs = JSON.parse(rawSubs); } catch (_) {}
+            }
             setRubrikMeta({
               label: found.name,
               description: found.description || '',
               color: found.color || '#2563EB',
               emoji: found.emoji || '',
-              subRubriks: found.subRubriks || [],
+              subRubriks: Array.isArray(parsedSubs) ? parsedSubs : [],
             });
           }
         }

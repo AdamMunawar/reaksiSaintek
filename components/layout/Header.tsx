@@ -26,49 +26,84 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
   const [navLinks, setNavLinks] = useState<NavLinkItem[]>(DEFAULT_NAV_LINKS);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [expandedMobileRubrik, setExpandedMobileRubrik] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
-    const syncNav = () => {
-      const list = db.getRubriks() || [];
-      const filteredRubriks = list.filter(
-        (r) => r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name?.toLowerCase() !== 'e-paper'
-      );
 
-      setNavLinks([
+    const parseSubList = (raw: any): string[] => {
+      if (Array.isArray(raw)) return raw.filter((s) => typeof s === 'string' && s.trim());
+      if (typeof raw === 'string' && raw.trim()) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed.filter((s) => typeof s === 'string' && s.trim());
+        } catch (_) {}
+      }
+      return [];
+    };
+
+    const buildNav = (items: any[]) => {
+      const filtered = items.filter(
+        (r: any) => r && r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name?.toLowerCase() !== 'e-paper'
+      );
+      return [
         { href: '/', label: 'Beranda' },
-        ...filteredRubriks.map((r) => ({
+        ...filtered.map((r: any) => ({
           href: `/${r.slug}`,
           label: r.name,
           slug: r.slug,
-          subRubriks: r.subRubriks || [],
+          subRubriks: parseSubList(r.subRubriks || r.sub_rubriks),
         })),
         { href: '/e-paper', label: 'E-Paper', slug: 'e-paper' },
-      ]);
+      ];
     };
-    syncNav();
 
-    // Live sync from API
+    // 1. Immediately hydrate from cache to prevent navbar disappearing into 2 links
+    try {
+      const cached = localStorage.getItem('reaksi_nav_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 2) {
+          setNavLinks(parsed);
+        }
+      }
+    } catch (_) {}
+
+    // 2. Hydrate from db repository if available
+    const localRubriks = db.getRubriks() || [];
+    if (localRubriks.length > 0) {
+      const built = buildNav(localRubriks);
+      setNavLinks(built);
+      try {
+        localStorage.setItem('reaksi_nav_cache', JSON.stringify(built));
+      } catch (_) {}
+    }
+
+    const syncNav = () => {
+      const list = db.getRubriks() || [];
+      if (list.length > 0) {
+        const built = buildNav(list);
+        setNavLinks(built);
+        try {
+          localStorage.setItem('reaksi_nav_cache', JSON.stringify(built));
+        } catch (_) {}
+      }
+    };
+
+    // 3. Live sync from backend API
     fetch('/api/rubriks')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (Array.isArray(data)) {
-          const filtered = data.filter(
-            (r: any) => r.slug !== 'epaper' && r.slug !== 'e-paper' && r.name?.toLowerCase() !== 'e-paper'
-          );
-          setNavLinks([
-            { href: '/', label: 'Beranda' },
-            ...filtered.map((r: any) => ({
-              href: `/${r.slug}`,
-              label: r.name,
-              slug: r.slug,
-              subRubriks: r.subRubriks || [],
-            })),
-            { href: '/e-paper', label: 'E-Paper', slug: 'e-paper' },
-          ]);
+        if (Array.isArray(data) && data.length > 0) {
+          const built = buildNav(data);
+          setNavLinks(built);
+          try {
+            localStorage.setItem('reaksi_nav_cache', JSON.stringify(built));
+          } catch (_) {}
+          db.syncRubriksFromRemote(data);
         }
       })
       .catch(() => {});
@@ -194,14 +229,20 @@ export default function Header() {
       </div>
 
       {/* ── NAVIGATION BAR (desktop) ── */}
-      <div className="hidden lg:block" style={{ background: 'var(--color-surface)' }}>
+      <div className="hidden lg:block relative z-40" style={{ background: 'var(--color-surface)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center overflow-x-auto no-scrollbar">
+          <nav className="flex items-center flex-wrap overflow-visible relative">
             {navLinks.map((item) => {
               const hasSubs = item.subRubriks && item.subRubriks.length > 0;
+              const isOpen = activeDropdown === (item.slug || item.href);
               if (hasSubs) {
                 return (
-                  <div key={item.href} className="relative group flex-shrink-0">
+                  <div
+                    key={item.href}
+                    className="relative group flex-shrink-0"
+                    onMouseEnter={() => setActiveDropdown(item.slug || item.href)}
+                    onMouseLeave={() => setActiveDropdown(null)}
+                  >
                     <Link
                       href={item.href}
                       className="flex items-center px-4 py-2.5 text-[11.5px] font-bold uppercase tracking-[0.08em] transition-all whitespace-nowrap border-b-[3px] border-transparent group-hover:border-[var(--color-accent)]"
@@ -211,16 +252,25 @@ export default function Header() {
                       }}
                     >
                       <span>{item.label}</span>
-                      <ChevronDown size={12} className="ml-1 opacity-70 group-hover:rotate-180 transition-transform duration-200" />
+                      <ChevronDown
+                        size={12}
+                        className={`ml-1 opacity-70 transition-transform duration-200 ${
+                          isOpen ? 'rotate-180 text-[var(--color-accent)]' : 'group-hover:rotate-180'
+                        }`}
+                      />
                     </Link>
 
                     {/* Dropdown Menu */}
                     <div
-                      className="opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 absolute top-full left-0 z-50 min-w-[200px] py-2"
+                      className={`absolute top-full left-0 z-50 min-w-[210px] py-1.5 transition-all duration-150 ${
+                        isOpen
+                          ? 'opacity-100 visible pointer-events-auto'
+                          : 'opacity-0 invisible pointer-events-none group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto'
+                      }`}
                       style={{
                         background: 'var(--color-surface)',
                         border: '2px solid var(--color-keyline)',
-                        boxShadow: 'var(--shadow-hard)',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
                       }}
                     >
                       <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--color-muted)' }}>
@@ -230,7 +280,8 @@ export default function Header() {
                         <Link
                           key={sub}
                           href={`/${item.slug || item.href.replace('/', '')}?sub=${encodeURIComponent(sub)}`}
-                          className="block px-3 py-2 text-[12px] font-semibold hover:bg-[var(--color-surface-hover)] transition-colors"
+                          onClick={() => setActiveDropdown(null)}
+                          className="block px-3 py-2 text-[12px] font-semibold hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-accent)] transition-colors"
                           style={{ color: 'var(--color-foreground)' }}
                         >
                           {sub}
@@ -239,6 +290,7 @@ export default function Header() {
                       <div className="my-1" style={{ borderTop: '1px solid var(--color-line)' }} />
                       <Link
                         href={item.href}
+                        onClick={() => setActiveDropdown(null)}
                         className="block px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.05em] hover:text-[var(--color-accent)] transition-colors"
                         style={{ color: 'var(--color-muted)' }}
                       >

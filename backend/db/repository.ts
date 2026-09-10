@@ -13,20 +13,6 @@ const STORAGE_KEYS = {
   MEDIA_PARTNER: 'reaksi_db_media_partner_v1',
 };
 
-// Purge all legacy database records and auth credentials from client localStorage
-if (typeof window !== 'undefined') {
-  try {
-    const toRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && (k.startsWith('reaksi_') || k.startsWith('reaksi_db_') || k.startsWith('reaksi_auth_'))) {
-        toRemove.push(k);
-      }
-    }
-    toRemove.forEach((k) => localStorage.removeItem(k));
-  } catch (_) {}
-}
-
 // In-memory fallback / SSR storage (Server-driven data architecture)
 let memoryStore: Record<string, any> = {
   articles: [...SEED_ARTICLES],
@@ -40,8 +26,24 @@ let memoryStore: Record<string, any> = {
 };
 
 function getLocal<T>(key: string, fallback: T): T {
-  // Pure in-memory fallback — never read or dump database records in client localStorage
   const storeKey = key.replace('reaksi_db_', '').replace(/_v\d+$/, '');
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed !== null && parsed !== undefined) {
+          memoryStore[storeKey] = parsed;
+          return parsed as T;
+        }
+      }
+    } catch (_) {}
+  }
+  if (storeKey in memoryStore && memoryStore[storeKey] !== undefined) {
+    if (!Array.isArray(memoryStore[storeKey]) || memoryStore[storeKey].length > 0) {
+      return memoryStore[storeKey] as T;
+    }
+  }
   if (storeKey in memoryStore) {
     return memoryStore[storeKey] as T;
   }
@@ -49,9 +51,13 @@ function getLocal<T>(key: string, fallback: T): T {
 }
 
 function setLocal<T>(key: string, value: T): void {
-  // Pure in-memory update — never expose database records to client inspect
   const storeKey = key.replace('reaksi_db_', '').replace(/_v\d+$/, '');
   memoryStore[storeKey] = value;
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (_) {}
+  }
 }
 
 function sanitizeArticle(art: Article): Article {
@@ -410,7 +416,7 @@ export const db = {
       bidang: staffItem.bidang || '',
       order: staffItem.order || all.length + 1,
       avatar: staffItem.avatar,
-      period: staffItem.period || '2026-2027',
+      period: staffItem.period || '',
       createdAt: new Date().toISOString(),
     };
     all.push(newStaff);
@@ -546,6 +552,13 @@ export const db = {
     });
     memoryStore.rubriks = updated;
     setLocal(STORAGE_KEYS.RUBRIKS, updated);
+  },
+
+  syncRubriksFromRemote(remoteList: RubrikItem[]): void {
+    if (Array.isArray(remoteList)) {
+      memoryStore.rubriks = remoteList;
+      setLocal(STORAGE_KEYS.RUBRIKS, remoteList);
+    }
   },
 
   /* ── E-PAPER & TABLOID ── */

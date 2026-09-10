@@ -3,6 +3,17 @@ import { getSession } from '@/backend/auth/security';
 import { query } from '@/backend/db/postgres';
 import { db } from '@/backend/db/repository';
 
+function parseSubRubriks(raw: any): string[] {
+  if (Array.isArray(raw)) return raw.filter((s) => typeof s === 'string' && s.trim());
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((s) => typeof s === 'string' && s.trim());
+    } catch (_) {}
+  }
+  return [];
+}
+
 export async function GET() {
   try {
     if (process.env.DATABASE_URL) {
@@ -16,8 +27,9 @@ export async function GET() {
           color: r.color || '#2563EB',
           emoji: r.emoji || '',
           order: r.sort_order ?? 1,
-          subRubriks: Array.isArray(r.sub_rubriks) ? r.sub_rubriks : [],
+          subRubriks: parseSubRubriks(r.sub_rubriks),
         }));
+        db.syncRubriksFromRemote(mapped);
         return NextResponse.json(mapped);
       }
     }
@@ -44,13 +56,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nama dan slug rubrik wajib diisi.' }, { status: 400 });
     }
 
+    const cleanSubs = parseSubRubriks(subRubriks);
+
     if (process.env.DATABASE_URL) {
       try {
         await query(`ALTER TABLE rubriks ADD COLUMN IF NOT EXISTS sub_rubriks JSONB DEFAULT '[]'::jsonb;`);
       } catch (_) {}
 
       const rubrikId = id || `rubrik-${Date.now()}`;
-      const subJson = JSON.stringify(Array.isArray(subRubriks) ? subRubriks : []);
+      const subJson = JSON.stringify(cleanSubs);
       const res = await query(
         `INSERT INTO rubriks (id, slug, name, description, color, sub_rubriks)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -61,14 +75,22 @@ export async function POST(req: NextRequest) {
       );
       if (res && res.rows.length > 0) {
         const r = res.rows[0];
-        return NextResponse.json({
-          ...r,
-          subRubriks: Array.isArray(r.sub_rubriks) ? r.sub_rubriks : [],
-        });
+        const savedItem = {
+          id: r.id,
+          name: r.name,
+          slug: r.slug,
+          description: r.description,
+          color: r.color,
+          emoji: r.emoji || '',
+          order: r.sort_order ?? 1,
+          subRubriks: parseSubRubriks(r.sub_rubriks),
+        };
+        db.saveRubrik(savedItem);
+        return NextResponse.json(savedItem);
       }
     }
 
-    const saved = db.saveRubrik({ id, name, slug, description, color, emoji: '', subRubriks });
+    const saved = db.saveRubrik({ id, name, slug, description, color, emoji: '', subRubriks: cleanSubs });
     return NextResponse.json(saved);
   } catch (error: any) {
     console.error('Error saving rubrik:', error);

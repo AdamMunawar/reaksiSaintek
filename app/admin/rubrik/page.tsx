@@ -61,6 +61,17 @@ export default function AdminRubrikPage() {
     loadData();
   }, []);
 
+  const parseSubRubriks = (raw: any): string[] => {
+    if (Array.isArray(raw)) return raw.filter((s) => typeof s === 'string' && s.trim());
+    if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.filter((s) => typeof s === 'string' && s.trim());
+      } catch (_) {}
+    }
+    return [];
+  };
+
   const loadData = () => {
     const list = db.getRubriks();
     setRubriks(list);
@@ -78,14 +89,13 @@ export default function AdminRubrikPage() {
             color: d.color || '#2563EB',
             emoji: d.emoji || '',
             order: d.sort_order ?? d.order ?? 1,
-            subRubriks: Array.isArray(d.sub_rubriks)
-              ? d.sub_rubriks
-              : Array.isArray(d.subRubriks)
-              ? d.subRubriks
-              : [],
+            subRubriks: parseSubRubriks(d.sub_rubriks || d.subRubriks),
           }));
           setRubriks(mapped);
           mapped.forEach((m: any) => db.saveRubrik(m));
+          try {
+            localStorage.setItem('reaksi_db_rubriks_v1', JSON.stringify(mapped));
+          } catch (_) {}
         }
       })
       .catch(() => {});
@@ -140,7 +150,7 @@ export default function AdminRubrikPage() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setNotification({ type: 'error', message: 'Nama rubrik tidak boleh kosong.' });
@@ -172,11 +182,23 @@ export default function AdminRubrikPage() {
 
     db.saveRubrik(payload);
 
-    fetch('/api/rubriks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).catch((err) => console.warn('Sync rubrik to Postgres error:', err));
+    try {
+      const res = await fetch('/api/rubriks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const savedRemote = await res.json();
+        db.saveRubrik(savedRemote);
+      }
+    } catch (err) {
+      console.warn('Sync rubrik to Postgres error:', err);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
 
     setNotification({
       type: 'success',
