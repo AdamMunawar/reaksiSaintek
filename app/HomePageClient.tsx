@@ -15,7 +15,7 @@ import {
 } from '@/lib/data';
 import { db } from '@/backend/db/repository';
 import { RubrikItem, EPaperItem } from '@/backend/db/schema';
-import { ArrowRight, Clock, TrendingUp, Sparkles, Newspaper, PenTool, BookOpen, Download } from 'lucide-react';
+import { ArrowRight, Clock, TrendingUp, Sparkles, Newspaper, PenTool, Download } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 import { extractCleanExcerpt } from '@/lib/utils/cleanHtml';
 
@@ -1071,8 +1071,7 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                                 }}
                               />
                               {/* Read overlay on hover */}
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs uppercase tracking-wider">
-                                <BookOpen size={16} />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs uppercase tracking-wider">
                                 <span>Buka Reader</span>
                               </div>
                             </div>
@@ -1167,14 +1166,13 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                           <div className="flex items-center gap-3 flex-wrap pt-2">
                             <Link
                               href={`/e-paper?read=${latest.id}`}
-                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm font-bold text-xs uppercase tracking-wider text-white transition-transform hover:-translate-y-0.5"
+                              className="inline-flex items-center justify-center px-5 py-2.5 rounded-sm font-bold text-xs uppercase tracking-wider text-white transition-transform hover:-translate-y-0.5"
                               style={{
                                 backgroundColor: 'var(--color-accent)',
                                 fontFamily: 'var(--font-display)',
                                 boxShadow: '0 2px 8px rgba(29, 78, 216, 0.3)',
                               }}
                             >
-                              <BookOpen size={14} />
                               <span>Baca E-Paper</span>
                             </Link>
 
@@ -1300,29 +1298,21 @@ export default function HomePageClient({ initialArticles = [], initialEPapers = 
                   }}
                   className="p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6"
                 >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-14 h-14 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontWeight: 800,
+                        fontSize: '16px',
+                        color: 'var(--color-foreground)',
+                        marginBottom: 4,
+                      }}
                     >
-                      <BookOpen size={28} />
-                    </div>
-                    <div>
-                      <h3
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontWeight: 800,
-                          fontSize: '16px',
-                          color: 'var(--color-foreground)',
-                          marginBottom: 4,
-                        }}
-                      >
-                        Penerbitan Tabloid & Buletin Digital Mahasiswa
-                      </h3>
-                      <p style={{ fontSize: '13px', color: 'var(--color-muted)', maxWidth: 540 }}>
-                        LPM Reaksi menerbitkan produk jurnalistik berkala cetak & digital dalam format majalah/tabloid A4 interaktif. Redaksi dapat mengunggah edisi baru melalui panel admin.
-                      </p>
-                    </div>
+                      Penerbitan Tabloid & Buletin Digital Mahasiswa
+                    </h3>
+                    <p style={{ fontSize: '13px', color: 'var(--color-muted)', maxWidth: 540 }}>
+                      LPM Reaksi menerbitkan produk jurnalistik berkala cetak & digital dalam format majalah/tabloid A4 interaktif. Redaksi dapat mengunggah edisi baru melalui panel admin.
+                    </p>
                   </div>
                   <Link
                     href="/e-paper"
