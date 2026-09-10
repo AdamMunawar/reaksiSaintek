@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/authContext';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { PageTitle } from '@/components/ui/PageTitle';
 
 export default function LoginPage() {
@@ -15,15 +15,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Mengautentikasi akun...');
-  const [publicSiteUrl, setPublicSiteUrl] = useState('/');
-
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const origin = window.location.origin;
-      const mainOrigin = origin.replace('//cms.', '//').replace('//redaksi.', '//');
-      setPublicSiteUrl(mainOrigin);
-    }
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,19 +59,13 @@ export default function LoginPage() {
       style={{ backgroundColor: 'var(--color-wall)', color: 'var(--color-foreground)' }}
     >
       <PageTitle title="Masuk Meja Redaksi" />
-      {/* Top back button */}
-      <div className="w-full max-w-md mb-6 flex justify-between items-center">
-        <a
-          href={publicSiteUrl}
-          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider transition-opacity hover:opacity-70"
-          style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-display)' }}
-          title="Buka Halaman Utama Portal Berita"
-        >
-          <ArrowLeft size={14} />
-          <span>Kembali ke Web Publik</span>
-        </a>
+      {/* Top branding bar */}
+      <div className="w-full max-w-md mb-6 flex justify-between items-center px-1">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-accent)]" style={{ fontFamily: 'var(--font-display)' }}>
+          Portal Internal
+        </span>
         <span className="text-[11px] font-semibold" style={{ color: 'var(--color-muted)' }}>
-          LPM Reaksi Portal
+          LPM Reaksi Meja Redaksi
         </span>
       </div>
 
@@ -95,7 +80,7 @@ export default function LoginPage() {
       >
         {/* Logo & title */}
         <div className="text-center mb-8">
-          <a href={publicSiteUrl} className="inline-block mb-3" title="Kunjungi Portal Utama LPM Reaksi">
+          <div className="inline-block mb-3">
             <Image
               src="/images/reaksi.png"
               alt="LPM Reaksi"
@@ -110,7 +95,7 @@ export default function LoginPage() {
               height={36}
               className="h-8 w-auto mx-auto object-contain hidden dark:block"
             />
-          </a>
+          </div>
           <h1
             className="text-lg font-extrabold uppercase tracking-tight"
             style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}

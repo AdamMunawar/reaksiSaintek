@@ -12,6 +12,8 @@ import ImageUploader from '@/components/ui/ImageUploader';
 import { PageTitle } from '@/components/ui/PageTitle';
 import {
   ArrowLeft,
+  ArrowRight,
+  PenTool,
   Send,
   Save,
   User,
@@ -56,6 +58,8 @@ function ContributorFormContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAction, setSubmitAction] = useState<'DRAFT' | 'PENDING_REVIEW' | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
+  const [submittedArticleTitle, setSubmittedArticleTitle] = useState('');
 
   useEffect(() => {
     const list = db.getRubriks();
@@ -180,13 +184,8 @@ function ContributorFormContent() {
         setSubmitAction(null);
 
         if (status === 'PENDING_REVIEW') {
-          setNotification({
-            type: 'success',
-            message: 'Naskah Anda berhasil dikirim ke Meja Redaksi & tersimpan di database server!',
-          });
-          setTimeout(() => {
-            router.push('/kontributor');
-          }, 1000);
+          setSubmittedArticleTitle(title);
+          setIsSubmittedSuccess(true);
         } else {
           setNotification({
             type: 'success',
@@ -195,6 +194,102 @@ function ContributorFormContent() {
         }
       });
   };
+
+  if (isSubmittedSuccess) {
+    return (
+      <div
+        className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 transition-colors"
+        style={{ backgroundColor: 'var(--color-wall)', color: 'var(--color-foreground)' }}
+      >
+        <PageTitle title="Naskah Berhasil Dikirim" />
+        <div
+          className="w-full max-w-xl p-8 sm:p-10 rounded-sm text-center"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            border: '2px solid var(--color-keyline)',
+            boxShadow: 'var(--shadow-hard-lg)',
+          }}
+        >
+          <div className="w-16 h-16 mx-auto mb-5 rounded-full flex items-center justify-center bg-emerald-500/10 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 size={34} />
+          </div>
+
+          <span
+            className="text-[10px] font-extrabold uppercase px-2.5 py-1 text-white inline-block mb-3"
+            style={{ backgroundColor: '#059669', fontFamily: 'var(--font-display)' }}
+          >
+            Pengajuan Naskah Terkirim
+          </span>
+
+          <h2
+            className="text-2xl font-extrabold uppercase tracking-tight mb-3"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--color-foreground)' }}
+          >
+            Naskah Anda Berhasil Masuk Meja Redaksi
+          </h2>
+
+          <div
+            className="p-4 my-5 text-left text-xs space-y-2 rounded-sm"
+            style={{
+              backgroundColor: 'var(--color-wall)',
+              border: '1px solid var(--color-line)',
+            }}
+          >
+            <div>
+              <span className="font-bold text-[10px] uppercase text-[var(--color-muted)] block">Judul Naskah</span>
+              <span className="font-bold text-sm text-[var(--color-foreground)] line-clamp-2">"{submittedArticleTitle || title}"</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t" style={{ borderColor: 'var(--color-line)' }}>
+              <div>
+                <span className="font-bold text-[10px] uppercase text-[var(--color-muted)] block">Penulis</span>
+                <span className="font-semibold text-[var(--color-foreground)]">{authorName || 'Kontributor'}</span>
+              </div>
+              <div>
+                <span className="font-bold text-[10px] uppercase text-[var(--color-muted)] block">Rubrik</span>
+                <span className="font-semibold text-[var(--color-foreground)] capitalize">{rubrik}</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs leading-relaxed mb-6" style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-body)' }}>
+            Terima kasih telah berpartisipasi menyuarakan gagasan bersama <strong>LPM Reaksi</strong>. Tim kurator redaksi kami akan meninjau tulisan Anda dan segera mengonfirmasi melalui kontak WhatsApp yang telah Anda cantumkan (<strong>{authorPhone || 'nomor kontak aktif'}</strong>).
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t" style={{ borderColor: 'var(--color-line)' }}>
+            <Link
+              href="/"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-extrabold uppercase tracking-wider text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: 'var(--color-accent)', fontFamily: 'var(--font-display)' }}
+            >
+              <span>Kembali ke Web Berita</span>
+              <ArrowRight size={14} />
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTitle('');
+                setContent('');
+                setExcerpt('');
+                setCoverImage('');
+                setIsSubmittedSuccess(false);
+              }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-colors hover:opacity-80"
+              style={{
+                backgroundColor: 'var(--color-wall)',
+                border: '1px solid var(--color-line)',
+                color: 'var(--color-foreground)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              <PenTool size={14} />
+              <span>Kirim Naskah Baru</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -212,12 +307,13 @@ function ContributorFormContent() {
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link
-            href="/kontributor"
+            href="/kirim-tulisan"
             className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider hover:opacity-70"
             style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-display)' }}
+            title="Kembali ke halaman Kirim Tulisan"
           >
             <ArrowLeft size={14} />
-            <span>Kembali ke Dashboard</span>
+            <span>Kembali ke Web Utama</span>
           </Link>
           <span
             className="text-[10px] font-extrabold uppercase px-2 py-0.5 text-white"

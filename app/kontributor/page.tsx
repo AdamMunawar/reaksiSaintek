@@ -48,7 +48,7 @@ export default function ContributorDashboard() {
     setIsLoggingOut(true);
     setTimeout(() => {
       logout();
-      router.push('/login');
+      router.push('/');
     }, 500);
   };
 
