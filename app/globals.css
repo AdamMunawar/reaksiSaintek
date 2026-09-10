@@ -107,6 +107,22 @@
 
   p { text-wrap: pretty; }
 
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [disabled],
+  input:disabled {
+    cursor: not-allowed;
+  }
+
   :focus-visible {
     outline: 3px solid var(--color-accent);
     outline-offset: 2px;
