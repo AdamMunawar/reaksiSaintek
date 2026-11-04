@@ -3,11 +3,11 @@ import { createWorkersResponseStoreServiceBindingConfig } from "@vinext/cloudfla
 
 const responseStore = await createWorkersResponseStoreServiceBindingConfig({
   worker: {
-    name: "lpm-reaksi-portal-response-store",
+    name: "reaksisaintek-response-store",
     compatibilityDate: "2026-11-04",
     compatibilityFlags: ["nodejs_compat"],
   },
-  bucket: "lpm-reaksi-portal-response-store-cache-bodies",
+  bucket: "reaksisaintek-response-store-cache-bodies",
 });
 
 export const responseStoreServiceBinding = responseStore.serviceBindingWorker;
@@ -15,7 +15,7 @@ export const responseStoreServiceBinding = responseStore.serviceBindingWorker;
 export default defineConfig({
   worker: defineWorker({
     ...responseStore.applicationWorker,
-    name: "lpm-reaksi-portal",
+    name: "reaksisaintek",
     entrypoint: "vinext/server/fetch-handler",
     compatibilityDate: "2026-11-04",
     compatibilityFlags: ["nodejs_compat"],
